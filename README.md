@@ -18,14 +18,14 @@ This project focuses on [].
 
 ### **Goals and Deliverables**  
 - **Goals:**  
-  - []
-  - []  
-  - []  
+  - 
+  -   
+  -   
 
 - **Deliverables:**  
-  - []  
-  - []  
-  - []  
+  - 
+  -   
+  -   
 
 ---
 
@@ -39,11 +39,11 @@ This project focuses on [].
 ## Roles and Responsibilities  
 | **Team Member** | **Role**       | **Responsibilities**          |  
 |------------------|----------------|--------------------------------|  
-| [Kattarin Chaisutthisunthon]           | [Front-end]         | []            |  
-| [Arch Promchan]           | [Front-end]         | []            |  
-| [Puripan Leelapong-Anan]           | [Embedded]         | []            |  
-| [Oumaima Oubihi]           | [Embedded]         | []            |  
-| [Md Rakibuzzaman Rakib]           | [Backend & Project manager]         | []            |  
+| [Kattarin Chaisutthisunthon]  | Front-end           | []            |  
+| [Arch Promchan]               | Front-end           | []            |  
+| [Puripan Leelapong-Anan]      | Embedded            | []            |  
+| [Oumaima Oubihi]              | Embedded            | []            |  
+| [Md Rakibuzzaman Rakib]       | Backend & Project manager  | []     |  
 
 ---
 
