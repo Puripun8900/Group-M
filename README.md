@@ -64,9 +64,9 @@ The team has started research on the following areas:
 
 ## Development Setup  
 All necessary tools and software have been installed and configured:  
-- **Code Editors:** [VS Code]  
-- **Version Control Tools:** [Git]  
-- **Testing Tools:** [Postman]
+- **Code Editors:** VS Code
+- **Version Control Tools:** Git  
+- **Testing Tools:** Postman
 - **
 
 ---
