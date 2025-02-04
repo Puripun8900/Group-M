@@ -116,3 +116,5 @@ The following tools and software are in use:
 
 ## **Documentation**  
 All project details, updates, and research findings will be documented in the `Group-M` repository and updated regularly.
+
+Link for the presentation slide: https://www.canva.com/design/DAGeEwke-HU/JttUgxHd4m1kYHBm-QW_dw/edit?utm_content=DAGeEwke-HU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
