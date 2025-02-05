@@ -34,10 +34,24 @@ The system must achieve the following functionalities:
 After research, the following sensors were chosen:
 | **Sensor Type** | **Model** | **Purpose** |
 |---------------|---------|------------|
-| Temperature & Humidity | DHT22 / BME280 | Monitor gym environment |
+| Temperature & Humidity | DHT22 | Monitor gym environment |
 | People Counting | VL53L1X (ToF Sensor) | Track gym occupancy accurately |
-| Motion Detection | HC-SR501 (PIR) | Automate lighting based on movement |
-| User Authentication | PN532 / RC522 (RFID/NFC Reader) | Identify gym members with key tags |
+| Motion Detection | AS312 (PIR) | Automate lighting based on movement |
+| User Authentication | PN532 + NXP MIFARE Classic (RFID Reader + Card) | Identify gym members with key tags |
+
+### **Links to the Sensors:**
+**Humidity and Temrature** - DHT22: 
+- https://fi.farnell.com/en-FI/dfrobot/sen0137/temp-humidity-sensor-arduino-brd/dp/3517874
+
+**People Counting** - VL53L1X (ToF Sensor): 
+- https://fi.farnell.com/en-FI/stmicroelectronics/vl53l1x-satel/breakout-board-tof-proximity-sensor/dp/2980975
+
+**Motion Detection** - AS312 (PIR): 
+- https://www.elfadistrelec.fi/fi/as312-m5stickc-pir-anturihattu-m5stack-u054/p/30180767?trackQuery=PIR%20sensor&pos=5&origPos=5&origPageSize=50&track=true&sid=Nv0SPa5dWX&itemList=search
+
+**User Authentication** - PN532 + NXP MIFARE Classic (RFID reader + Card): 
+- https://fi.farnell.com/en-FI/adafruit/789/silicon-manufacturer/dp/2816376
+- https://fi.farnell.com/en-FI/nxp/mf1s7030xda4-v1j/rfid-reader-writer-13-56mhz-4kb/dp/2820254
 
 ### **3. System Architecture**
 - **Sensors → Raspberry Pi Pico (Data Processing) → Database → Web UI**
