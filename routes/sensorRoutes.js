@@ -20,10 +20,10 @@ router.get("/", async (req, res) => {
 
         // Fetch data based on the query
         const sensors = await Sensor.find(query);
-        res.json(sensors); // Return the data as JSON
+        res.json(sensors); 
     } catch (error) {
-        console.error(error.stack); // Log the error stack trace
-        return res.status(500).json({ message: error.message }); // Return a 500 error with the error message
+        console.error(error.stack);
+        return res.status(500).json({ message: error.message });
     }
 });
 
@@ -40,7 +40,6 @@ router.get("/latest", async (req, res) => {
         // Fetch the latest people count reading
         const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
 
-        // Return the latest data as JSON
         res.json({
             temperature: latestTemperature ? latestTemperature.value : "No data", // Default to "No data" if no reading is found
             humidity: latestHumidity ? latestHumidity.value : "No data",
@@ -64,7 +63,6 @@ router.get("/history/temperature", async (req, res) => {
         // Fetch temperature data from the last month
         const temperatureHistory = await Sensor.find({ type: "Temperature", timestamp: { $gte: oneMonthAgo } });
 
-        // Return the temperature data as JSON
         res.json(temperatureHistory);
     } catch (error) {
         console.error(error.stack);
@@ -84,7 +82,6 @@ router.get("/history/humidity", async (req, res) => {
         // Fetch humidity data from the last month
         const humidityHistory = await Sensor.find({ type: "Humidity", timestamp: { $gte: oneMonthAgo } });
 
-        // Return the humidity data as JSON
         res.json(humidityHistory);
     } catch (error) {
         console.error(error.stack);
@@ -104,7 +101,6 @@ router.get("/history/peoplecount", async (req, res) => {
         // Fetch people count data from the last month
         const peopleCountHistory = await Sensor.find({ type: "PeopleCount", timestamp: { $gte: oneMonthAgo } });
 
-        // Return the people count data as JSON
         res.json(peopleCountHistory);
     } catch (error) {
         console.error(error.stack);
@@ -125,7 +121,7 @@ router.post("/", async (req, res) => {
     }
 
     try {
-        // Handle motion sensor logic
+        // Handle motion sensor logic with ToF sensor to light turn on if people inside, and avoid continuosly store motion sensor data
         if (type === "Motion") {
             const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
             if (latestPeopleCount?.value === 0 && value === false) {
@@ -153,7 +149,7 @@ router.post("/", async (req, res) => {
             return res.status(201).json(newSensor); // Return the saved document
         }
 
-        // Save data for other sensor types (e.g., temperature, humidity, RFID)
+        // Save data for other sensor types (eg: temperature, humidity, RFID)
         const newSensor = new Sensor({ type, model, value, unit });
         await newSensor.save();
         res.status(201).json(newSensor); // Return the saved document
@@ -179,10 +175,10 @@ router.delete("/:id", async (req, res) => {
         // Delete the document with the specified ID
         const response = await Sensor.deleteOne({ _id: id });
         if (response.deletedCount === 0) {
-            return res.status(404).json({ message: "Sensor data not found" }); // Return 404 if no document was deleted
+            return res.status(404).json({ message: "Sensor data not found" });
         }
 
-        res.status(200).json({ message: "Sensor data deleted successfully" }); // Return success message
+        res.status(200).json({ message: "Sensor data deleted successfully" }); 
     } catch (error) {
         console.error(error.stack);
         return res.status(500).json({ message: error.message });
@@ -191,7 +187,8 @@ router.delete("/:id", async (req, res) => {
 
 /**
  * Delete sensor data by date range.
- * Example: DELETE /sensors?startDate=2025-03-22&endDate=2025-03-22
+ * Example: DELETE /sensors?startDate=2025-03-01&endDate=2025-03-15
+ * date format: YYYY-MM-DD
  */
 router.delete("/", async (req, res) => {
     try {
@@ -216,10 +213,9 @@ router.delete("/", async (req, res) => {
             return res.status(400).json({ message: "startDate must be before endDate." });
         }
 
-        // Set endDate to the end of the day (23:59:59.999)
+        // Set endDate to the end of the day (23:59:59.999) to avoid error to delete data for 1 day (eg: startDate=2025-03-15&endDate=2025-03-15)
         end.setHours(23, 59, 59, 999);
 
-        // Log the query for debugging
         console.log("Deleting data between:", start, "and", end);
 
         // Delete documents within the date range
@@ -227,7 +223,6 @@ router.delete("/", async (req, res) => {
             timestamp: { $gte: start, $lte: end } // $gte: greater than or equal, $lte: less than or equal
         });
 
-        // Log the response for debugging
         console.log("Delete response:", response);
 
         // Check if any documents were deleted
@@ -235,7 +230,6 @@ router.delete("/", async (req, res) => {
             return res.status(404).json({ message: "No sensor data found within the specified date range." });
         }
 
-        // Return success message
         res.status(200).json({ message: `Deleted ${response.deletedCount} sensor data records between ${startDate} and ${endDate}.` });
     } catch (error) {
         console.error(error.stack);
@@ -259,10 +253,10 @@ router.put("/:id", async (req, res) => {
         // Update the document with the specified ID
         const response = await Sensor.findByIdAndUpdate(id, req.body, { new: true });
         if (!response) {
-            return res.status(404).json({ message: "Sensor data not found" }); // Return 404 if no document was found
+            return res.status(404).json({ message: "Sensor data not found" }); 
         }
 
-        res.status(200).json(response); // Return the updated document
+        res.status(200).json(response); 
     } catch (error) {
         console.error(error.stack);
         return res.status(500).json({ message: error.message });
