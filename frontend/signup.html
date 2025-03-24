@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Smart Gym</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('time').innerText = `${hours} : ${minutes}`;
+    
+            let greeting = "GOOD MORNING";
+            if (hours >= 12 && hours < 18) greeting = "GOOD AFTERNOON";
+            else if (hours >= 18) greeting = "GOOD EVENING";
+            document.getElementById('greeting').innerText = greeting;
+    
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
+        }
+        setInterval(updateTime, 1000);
+        window.onload = updateTime;
+    
+        async function validateSignup() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+    
+            if (username.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
+                alert('Please fill in all fields.');
+                return;
+            }
+    
+            if (password !== confirmPassword) {
+                alert('Passwords do not match.');
+                return;
+            }
+    
+            if (!/\S+@\S+\.\S+/.test(email)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+    
+            const data = { username, email, password };
+    
+            try {
+                const response = await fetch('https://smartgym-m.azurewebsites.net/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+    
+                const result = await response.json();
+    
+                if (response.ok) {
+                    alert('Sign Up Successful');
+                    window.location.href = 'login.html';
+                } else {
+                    alert(result.message || 'Sign Up Failed');
+                }
+            } catch (error) {
+                alert('An error occurred, please try again.');
+            }
+        }
+    </script>
+    
+    
+    <style>
+        body {
+            background: url('https://i.ibb.co/Z1dTcNGx/Screenshot-2025-02-28-205107.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body class="text-white relative flex flex-col items-center">
+
+    <!-- Top Section: Logo, Greeting, Time & Date -->
+    <div class="absolute top-6 left-6 flex items-center">
+        <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
+        <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
+    </div>
+    
+    <div class="absolute top-6 right-6 flex space-x-6 text-xl">
+        <h1 id="greeting" class="font-bold text-3xl uppercase">GOOD MORNING</h1>
+        <p id="time" class="text-3xl font-bold">07 : 35</p>
+        <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div class="w-full flex justify-center items-center mt-16 flex-grow">
+        <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg w-[400px]">
+            <h2 class="text-2xl text-center text-blue-400 font-bold">CREATE ACCOUNT</h2>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="username" class="text-sm">Username</label>
+                    <input type="text" id="username" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter username">
+                </div>
+                <div>
+                    <label for="email" class="text-sm">Email</label>
+                    <input type="email" id="email" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter email">
+                </div>
+                <div>
+                    <label for="password" class="text-sm">Password</label>
+                    <input type="password" id="password" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter password">
+                </div>
+                <div>
+                    <label for="confirmPassword" class="text-sm">Confirm Password</label>
+                    <input type="password" id="confirmPassword" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Confirm password">
+                </div>
+            </div>
+            <div class="mt-6">
+                <button type="button" onclick="validateSignup()" class="w-full py-3 bg-blue-400 text-white rounded-md">SIGN UP</button>
+            </div>
+            <div class="mt-4 text-center">
+                <p class="text-sm">Already have an account? <a href="login.html" class="text-blue-400">Log In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer: Contact Information -->
+    <div class="absolute bottom-8 left-6 text-sm">
+        <p class="text-blue-400 font-bold">LOMAKYLÄ RAKKARANTA</p>
+        <p>📞 050 400 0373</p>
+        <p>📍 Neljäs Avenjuu 3, 89400 Hyrynsalmi</p>
+    </div>
+</body>
+</html>
