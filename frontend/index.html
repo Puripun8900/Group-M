@@ -66,16 +66,7 @@
                 const username = localStorage.getItem('username') || "Guest User";
                 document.getElementById('userName').innerText = username;
                 document.getElementById('customerNumber').innerText = customerNumber;
-                // In production, this code would be used instead:
-                /*
-                const response = await fetch('https://smartgym-m.azurewebsites.net/sensors/latest');
-                const data = await response.json();
                 
-                document.getElementById('tempValue').innerText = data.temperature;
-                document.getElementById('tempUnit').innerText = '°C';
-                document.getElementById('humidityValue').innerText = `${data.humidity}%`;
-                document.getElementById('currentOccupancy').innerText = data.peopleCount;
-                */
             } catch (error) {
                 console.error('Error:', error);
                 useFallbackData();
