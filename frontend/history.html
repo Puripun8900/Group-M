@@ -198,55 +198,7 @@
                 document.getElementById('userName').innerText = username;
                 document.getElementById('customerNumber').innerText = customerNumber;
                 
-                // In production, this code would be used instead:
-                /*
-                const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.all([
-                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/temperature'),
-                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/humidity'),
-                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/peoplecount')
-                ]);
                 
-                if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
-                    throw new Error("Failed to fetch historical data");
-                }
-                
-                const tempData = await tempResponse.json();
-                const humidityData = await humidityResponse.json();
-                const peopleCountData = await peopleCountResponse.json();
-                
-                console.log("Temperature data:", tempData);
-                console.log("Humidity data:", humidityData);
-                console.log("People count data:", peopleCountData);
-                
-                // Process data based on current time range
-                const processedTempData = processHistoricalData(tempData, currentTimeRange);
-                const processedHumidityData = processHistoricalData(humidityData, currentTimeRange);
-                const processedPeopleCountData = processHistoricalData(peopleCountData, currentTimeRange);
-                
-                // Create charts
-                createChart('temperatureChart', 'Temperature (°C)', 
-                    processedTempData.labels, 
-                    processedTempData.values, 
-                    'rgba(59, 130, 246, 0.8)'
-                );
-                
-                createChart('humidityChart', 'Humidity (%)', 
-                    processedHumidityData.labels, 
-                    processedHumidityData.values, 
-                    'rgba(16, 185, 129, 0.8)'
-                );
-                
-                createChart('occupancyChart', 'Occupancy (people)', 
-                    processedPeopleCountData.labels, 
-                    processedPeopleCountData.values, 
-                    'rgba(249, 115, 22, 0.8)'
-                );
-                
-                // Display user info with consistent customer number
-                const username = localStorage.getItem('username') || "Guest User";
-                document.getElementById('userName').innerText = username;
-                document.getElementById('customerNumber').innerText = customerNumber;
-                */
             } catch (error) {
                 console.error('Error fetching historical data:', error);
                 fallbackToSampleData();
