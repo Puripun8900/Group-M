@@ -134,45 +134,36 @@
             fetchHistoricalData();
         };
         
-        // Helper function to generate mock historical data
-        function generateMockHistoricalData(baseValue, variance, count, type) {
-            const data = [];
-            const now = new Date();
-            
-            for (let i = 0; i < count; i++) {
-                const timestamp = new Date(now);
-                timestamp.setDate(timestamp.getDate() - (count - 1) + i);
-                
-                const value = baseValue + (Math.random() * variance * 2 - variance);
-                data.push({
-                    type: type,
-                    value: type === "PeopleCount" ? Math.round(Math.max(0, value)) : parseFloat(value.toFixed(1)),
-                    timestamp: timestamp.toISOString(),
-                    unit: type === "Temperature" ? "°C" : type === "Humidity" ? "%" : "persons"
-                });
-            }
-            
-            return data;
-        }
-        
         async function fetchHistoricalData() {
             try {
-                console.log("Using mock historical data");
+                console.log("Fetching historical data from API...");
                 
-                // Generate sample data for temperature, humidity, and people count
-                // These values are similar to what the API would return
-                const mockTempData = generateMockHistoricalData(24.5, 3, 30, "Temperature");
-                const mockHumidityData = generateMockHistoricalData(65, 10, 30, "Humidity");
-                const mockPeopleCountData = generateMockHistoricalData(15, 5, 30, "PeopleCount");
+                const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.all([
+                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/temperature'),
+                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/humidity'),
+                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/peoplecount')
+                ]);
                 
-                console.log("Mock temperature data sample:", mockTempData[0]);
-                console.log("Mock humidity data sample:", mockHumidityData[0]);
-                console.log("Mock people count data sample:", mockPeopleCountData[0]);
+                console.log("Temperature response status:", tempResponse.status);
+                console.log("Humidity response status:", humidityResponse.status);
+                console.log("People count response status:", peopleCountResponse.status);
+                
+                if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
+                    throw new Error("Failed to fetch historical data");
+                }
+                
+                const tempData = await tempResponse.json();
+                const humidityData = await humidityResponse.json();
+                const peopleCountData = await peopleCountResponse.json();
+                
+                console.log("Temperature data sample:", tempData.length > 0 ? tempData[0] : "No data");
+                console.log("Humidity data sample:", humidityData.length > 0 ? humidityData[0] : "No data");
+                console.log("People count data sample:", peopleCountData.length > 0 ? peopleCountData[0] : "No data");
                 
                 // Process data based on current time range
-                const processedTempData = processHistoricalData(mockTempData, currentTimeRange);
-                const processedHumidityData = processHistoricalData(mockHumidityData, currentTimeRange);
-                const processedPeopleCountData = processHistoricalData(mockPeopleCountData, currentTimeRange);
+                const processedTempData = processHistoricalData(tempData, currentTimeRange);
+                const processedHumidityData = processHistoricalData(humidityData, currentTimeRange);
+                const processedPeopleCountData = processHistoricalData(peopleCountData, currentTimeRange);
                 
                 // Create charts
                 createChart('temperatureChart', 'Temperature (°C)', 
@@ -197,8 +188,6 @@
                 const username = localStorage.getItem('username') || "Guest User";
                 document.getElementById('userName').innerText = username;
                 document.getElementById('customerNumber').innerText = customerNumber;
-                
-                
             } catch (error) {
                 console.error('Error fetching historical data:', error);
                 fallbackToSampleData();
