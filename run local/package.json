@@ -1,0 +1,13 @@
+{
+    "name": "smart-gym-frontend",
+    "version": "1.0.0",
+    "description": "Smart Gym Frontend with API Proxy",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js"
+    },
+    "dependencies": {
+      "express": "^4.18.2",
+      "http-proxy-middleware": "^2.0.6"
+    }
+  }
