@@ -6,11 +6,11 @@ const Sensor = require('../models/sensorSchema');
 
 /**
  * Fetch all sensor data or filter by sensor type.
- * Example: /sensors?type=Temperature
+ * Example: /sensors?type=Temperature 
  */
 router.get("/", async (req, res) => {
     try {
-        const { type } = req.query; // Extract the "type" query parameter (e.g., Temperature, Humidity, etc.)
+        const { type } = req.query; // Extract the "type" query parameter (e.g. Temperature, Humidity, )
 
         // Build the query object
         let query = {};
@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
 
         // Fetch data based on the query
         const sensors = await Sensor.find(query);
-        res.json(sensors); 
+        res.status(200).json(sensors); 
     } catch (error) {
         console.error(error.stack);
         return res.status(500).json({ message: error.message });
@@ -29,7 +29,7 @@ router.get("/", async (req, res) => {
 
 /**
  * Get the latest environment and occupancy data.
- * Example: /sensors/latest
+ * Example: /sensors/latest?type=Temperature
  */
 router.get("/latest", async (req, res) => {
     try {
