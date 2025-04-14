@@ -12,6 +12,12 @@ app.use('/sensors', routes);
 // serve static file
 app.use(express.static(path.join(__dirname, 'frontend')));
 
+// Fallback route to serve index.html
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
+
 //Mongodb connection
 const MONGO_URL = process.env.MONGO_URI;
 const connectToMongodb = async () => {
@@ -27,10 +33,6 @@ const connectToMongodb = async () => {
 };
 connectToMongodb();
 
-// Fallback route to serve index.html
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
-});
 
 //server
 const port = process.env.PORT || 3000; // Use environment variable for port to host
