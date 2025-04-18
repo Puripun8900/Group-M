@@ -55,19 +55,16 @@
             signupButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Signing up...';
     
             if (username.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
-                showError('Please fill in all fields.');
                 resetButton();
                 return;
             }
     
             if (password !== confirmPassword) {
-                showError('Passwords do not match.');
                 resetButton();
                 return;
             }
     
             if (!/\S+@\S+\.\S+/.test(email)) {
-                showError('Please enter a valid email address.');
                 resetButton();
                 return;
             }
@@ -100,7 +97,6 @@
                 window.location.href = 'login.html';
             } catch (error) {
                 console.error('Error during signup:', error);
-                showError('Sign up failed. Please try again later.');
                 resetButton();
             }
             
@@ -108,16 +104,6 @@
                 signupButton.disabled = false;
                 signupButton.innerHTML = originalButtonText;
             }
-        }
-        
-        function showError(message) {
-            const errorElement = document.getElementById('errorMessage');
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-            
-            setTimeout(() => {
-                errorElement.classList.add('hidden');
-            }, 5000);
         }
     </script>
     <style>
@@ -129,21 +115,6 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-        }
-        
-        .error-message {
-            background-color: rgba(239, 68, 68, 0.9);
-            color: white;
-            border-radius: 0.25rem;
-            padding: 0.5rem 1rem;
-            margin-top: 1rem;
-            text-align: center;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -184,7 +155,6 @@
                     <label for="confirmPassword" class="text-sm">Confirm Password</label>
                     <input type="password" id="confirmPassword" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Confirm password">
                 </div>
-                <div id="errorMessage" class="error-message hidden"></div>
             </div>
             <div class="mt-6">
                 <button id="signupButton" type="button" onclick="validateSignup()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">SIGN UP</button>
