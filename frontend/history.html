@@ -147,7 +147,9 @@
         async function fetchHistoricalData() {
             try {
                 // Show loading indicators
-                document.getElementById('loadingMessage').classList.remove('hidden');
+                document.querySelectorAll('.chart-container').forEach(el => {
+                    el.classList.add('opacity-50');
+                });
                 
                 const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.all([
                     fetch(`${API_BASE_URL}/sensors/history/temperature`),
@@ -187,15 +189,15 @@
                     'rgba(249, 115, 22, 0.8)'
                 );
                 
-                // Hide loading indicator
-                document.getElementById('loadingMessage').classList.add('hidden');
+                // Hide loading indicators
+                document.querySelectorAll('.chart-container').forEach(el => {
+                    el.classList.remove('opacity-50');
+                });
             } catch (error) {
                 console.error('Error fetching historical data:', error);
-                document.getElementById('loadingMessage').classList.add('hidden');
-                document.getElementById('errorMessage').classList.remove('hidden');
-                setTimeout(() => {
-                    document.getElementById('errorMessage').classList.add('hidden');
-                }, 5000);
+                document.querySelectorAll('.chart-container').forEach(el => {
+                    el.classList.remove('opacity-50');
+                });
                 fallbackToSampleData();
             }
         }
@@ -390,20 +392,8 @@
             padding: 1rem;
         }
         
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid #3b82f6;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .chart-container {
+            transition: opacity 0.3s ease;
         }
     </style>
 </head>
@@ -420,18 +410,6 @@
         <h1 id="greeting" class="font-bold text-3xl uppercase">GOOD MORNING</h1>
         <p id="time" class="text-3xl font-bold">07 : 35</p>
         <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
-    </div>
-    
-    <!-- Loading and Error Messages -->
-    <div id="loadingMessage" class="fixed top-20 right-6 bg-blue-500 text-white px-4 py-2 rounded shadow-lg hidden">
-        <div class="flex items-center">
-            <div class="loading-spinner"></div>
-            Loading data...
-        </div>
-    </div>
-    
-    <div id="errorMessage" class="fixed top-20 right-6 bg-red-500 text-white px-4 py-2 rounded shadow-lg hidden">
-        Unable to fetch data. Showing sample data.
     </div>
     
     <!-- Main Content -->
@@ -468,7 +446,7 @@
             <!-- Temperature Chart -->
             <div class="bg-gray-900 bg-opacity-75 p-4 rounded-lg">
                 <h3 class="text-xl text-blue-400 mb-2">TEMPERATURE HISTORY</h3>
-                <div id="temperatureChartContainer" class="h-[250px]">
+                <div id="temperatureChartContainer" class="h-[250px] chart-container">
                     <canvas id="temperatureChart" height="250"></canvas>
                 </div>
             </div>
@@ -476,7 +454,7 @@
             <!-- Humidity Chart -->
             <div class="bg-gray-900 bg-opacity-75 p-4 rounded-lg">
                 <h3 class="text-xl text-blue-400 mb-2">HUMIDITY HISTORY</h3>
-                <div id="humidityChartContainer" class="h-[250px]">
+                <div id="humidityChartContainer" class="h-[250px] chart-container">
                     <canvas id="humidityChart" height="250"></canvas>
                 </div>
             </div>
@@ -484,7 +462,7 @@
             <!-- Occupancy Chart -->
             <div class="bg-gray-900 bg-opacity-75 p-4 rounded-lg lg:col-span-2">
                 <h3 class="text-xl text-blue-400 mb-2">OCCUPANCY HISTORY</h3>
-                <div id="occupancyChartContainer" class="h-[250px]">
+                <div id="occupancyChartContainer" class="h-[250px] chart-container">
                     <canvas id="occupancyChart" height="250"></canvas>
                 </div>
             </div>
