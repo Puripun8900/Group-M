@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>History - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // Global API URL
+        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
+        
         // Track the current time range
         let currentTimeRange = 'day';
-        
-        // Generate a consistent customer number when the page loads
-        let customerNumber = localStorage.getItem('customerNumber');
-        if (!customerNumber) {
-            customerNumber = "000" + Math.floor(Math.random() * 1000);
-            localStorage.setItem('customerNumber', customerNumber);
-        }
         
         function updateTime() {
             const now = new Date();
@@ -31,7 +28,7 @@
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
-        setInterval(updateTime, 1000);
+        setInterval(updateTime, 60000); // Update time every minute
         
         // Process historical data from API
         function processHistoricalData(data, timeRange) {
@@ -131,22 +128,32 @@
         
         window.onload = function() {
             updateTime();
+            
+            // Get or generate a consistent customer number
+            let customerNumber = localStorage.getItem('customerNumber');
+            if (!customerNumber) {
+                customerNumber = "000000"; // Default for guest users
+                localStorage.setItem('customerNumber', customerNumber);
+            }
+            
+            // Display user info
+            const username = localStorage.getItem('username') || "Guest User";
+            document.getElementById('userName').innerText = username;
+            document.getElementById('customerNumber').innerText = customerNumber;
+            
             fetchHistoricalData();
         };
         
         async function fetchHistoricalData() {
             try {
-                console.log("Fetching historical data from API...");
+                // Show loading indicators
+                document.getElementById('loadingMessage').classList.remove('hidden');
                 
                 const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.all([
-                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/temperature'),
-                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/humidity'),
-                    fetch('https://smartgym-m.azurewebsites.net/sensors/history/peoplecount')
+                    fetch(`${API_BASE_URL}/sensors/history/temperature`),
+                    fetch(`${API_BASE_URL}/sensors/history/humidity`),
+                    fetch(`${API_BASE_URL}/sensors/history/peoplecount`)
                 ]);
-                
-                console.log("Temperature response status:", tempResponse.status);
-                console.log("Humidity response status:", humidityResponse.status);
-                console.log("People count response status:", peopleCountResponse.status);
                 
                 if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
                     throw new Error("Failed to fetch historical data");
@@ -155,10 +162,6 @@
                 const tempData = await tempResponse.json();
                 const humidityData = await humidityResponse.json();
                 const peopleCountData = await peopleCountResponse.json();
-                
-                console.log("Temperature data sample:", tempData.length > 0 ? tempData[0] : "No data");
-                console.log("Humidity data sample:", humidityData.length > 0 ? humidityData[0] : "No data");
-                console.log("People count data sample:", peopleCountData.length > 0 ? peopleCountData[0] : "No data");
                 
                 // Process data based on current time range
                 const processedTempData = processHistoricalData(tempData, currentTimeRange);
@@ -184,12 +187,15 @@
                     'rgba(249, 115, 22, 0.8)'
                 );
                 
-                // Display user info with consistent customer number
-                const username = localStorage.getItem('username') || "Guest User";
-                document.getElementById('userName').innerText = username;
-                document.getElementById('customerNumber').innerText = customerNumber;
+                // Hide loading indicator
+                document.getElementById('loadingMessage').classList.add('hidden');
             } catch (error) {
                 console.error('Error fetching historical data:', error);
+                document.getElementById('loadingMessage').classList.add('hidden');
+                document.getElementById('errorMessage').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('errorMessage').classList.add('hidden');
+                }, 5000);
                 fallbackToSampleData();
             }
         }
@@ -256,11 +262,6 @@
             createChart('temperatureChart', 'Temperature (°C)', labels, tempData, 'rgba(59, 130, 246, 0.8)');
             createChart('humidityChart', 'Humidity (%)', labels, humidityData, 'rgba(16, 185, 129, 0.8)');
             createChart('occupancyChart', 'Occupancy (people)', labels, occupancyData, 'rgba(249, 115, 22, 0.8)');
-            
-            // Display user info with consistent customer number
-            const username = localStorage.getItem('username') || "Guest User";
-            document.getElementById('userName').innerText = username;
-            document.getElementById('customerNumber').innerText = customerNumber;
         }
         
         function createChart(canvasId, label, labels, data, color) {
@@ -367,6 +368,13 @@
             // Fetch new data with the updated time range
             fetchHistoricalData();
         }
+        
+        function logout() {
+            localStorage.removeItem('username');
+            localStorage.removeItem('email');
+            localStorage.setItem('customerNumber', '000000');
+            window.location.href = 'login.html';
+        }
     </script>
     
     <style>
@@ -380,6 +388,22 @@
             background-color: rgba(17, 24, 39, 0.8);
             border-radius: 0.5rem;
             padding: 1rem;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #3b82f6;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -398,11 +422,23 @@
         <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
     </div>
     
+    <!-- Loading and Error Messages -->
+    <div id="loadingMessage" class="fixed top-20 right-6 bg-blue-500 text-white px-4 py-2 rounded shadow-lg hidden">
+        <div class="flex items-center">
+            <div class="loading-spinner"></div>
+            Loading data...
+        </div>
+    </div>
+    
+    <div id="errorMessage" class="fixed top-20 right-6 bg-red-500 text-white px-4 py-2 rounded shadow-lg hidden">
+        Unable to fetch data. Showing sample data.
+    </div>
+    
     <!-- Main Content -->
     <div class="w-full max-w-7xl mx-auto mt-28 pb-24 px-6">
         <!-- Header with Back Button -->
         <div class="flex justify-between items-center mb-6">
-            <button onclick="window.location.href='index.html';" class="flex items-center text-blue-400">
+            <button onclick="window.location.href='index.html';" class="flex items-center text-blue-400 hover:underline">
                 <span class="mr-2">&#x2190;</span> BACK TO DASHBOARD
             </button>
             
