@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Sign Up - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Global API URL
+        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
+        
         function updateTime() {
             const now = new Date();
             const hours = now.getHours().toString().padStart(2, '0'); // Ensures 2-digit format
@@ -23,34 +27,97 @@
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
-        setInterval(updateTime, 1000);
+        setInterval(updateTime, 60000); // Update time every minute
         window.onload = updateTime;
+        
+        function goToIndexAsGuest() {
+            // Clear any existing user data
+            localStorage.removeItem('username');
+            localStorage.removeItem('email');
+            
+            // Set customer number to 000000 for guest users
+            localStorage.setItem('customerNumber', '000000');
+            
+            // Redirect to index
+            window.location.href = 'index.html';
+        }
         
         async function validateSignup() {
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Show loading state
+            const signupButton = document.getElementById('signupButton');
+            const originalButtonText = signupButton.innerHTML;
+            signupButton.disabled = true;
+            signupButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Signing up...';
     
             if (username.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
-                alert('Please fill in all fields.');
+                showError('Please fill in all fields.');
+                resetButton();
                 return;
             }
     
             if (password !== confirmPassword) {
-                alert('Passwords do not match.');
+                showError('Passwords do not match.');
+                resetButton();
                 return;
             }
     
             if (!/\S+@\S+\.\S+/.test(email)) {
-                alert('Please enter a valid email address.');
+                showError('Please enter a valid email address.');
+                resetButton();
                 return;
             }
     
-            // For demonstration purposes, we'll just redirect to login
-            // In a real app, you would send this data to your backend
-            alert('Sign Up Successful');
-            window.location.href = 'login.html';
+            try {
+                // In a production environment, you would connect to the API here
+                /*
+                const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Signup failed');
+                }
+                */
+                
+                // Store user information in localStorage
+                localStorage.setItem('username', username);
+                localStorage.setItem('email', email);
+                
+                // Generate a customer number
+                const customerNumber = "000" + Math.floor(Math.random() * 1000);
+                localStorage.setItem('customerNumber', customerNumber);
+                
+                // Redirect to login page
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Error during signup:', error);
+                showError('Sign up failed. Please try again later.');
+                resetButton();
+            }
+            
+            function resetButton() {
+                signupButton.disabled = false;
+                signupButton.innerHTML = originalButtonText;
+            }
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
         }
     </script>
     <style>
@@ -63,14 +130,31 @@
             flex-direction: column;
             justify-content: space-between;
         }
+        
+        .error-message {
+            background-color: rgba(239, 68, 68, 0.9);
+            color: white;
+            border-radius: 0.25rem;
+            padding: 0.5rem 1rem;
+            margin-top: 1rem;
+            text-align: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="text-white relative flex flex-col items-center">
 
     <!-- Top Section: Logo, Greeting, Time & Date -->
     <div class="absolute top-6 left-6 flex items-center">
-        <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
-        <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
+        <a href="javascript:void(0)" onclick="goToIndexAsGuest()" class="flex items-center">
+            <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
+            <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
+        </a>
     </div>
     
     <div class="absolute top-6 right-6 flex space-x-6 text-xl">
@@ -100,12 +184,13 @@
                     <label for="confirmPassword" class="text-sm">Confirm Password</label>
                     <input type="password" id="confirmPassword" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Confirm password">
                 </div>
+                <div id="errorMessage" class="error-message hidden"></div>
             </div>
             <div class="mt-6">
-                <button type="button" onclick="validateSignup()" class="w-full py-3 bg-blue-400 text-white rounded-md">SIGN UP</button>
+                <button id="signupButton" type="button" onclick="validateSignup()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">SIGN UP</button>
             </div>
             <div class="mt-4 text-center">
-                <p class="text-sm">Already have an account? <a href="login.html" class="text-blue-400">Log In</a></p>
+                <p class="text-sm">Already have an account? <a href="login.html" class="text-blue-400 hover:underline">Log In</a></p>
             </div>
         </div>
     </div>
