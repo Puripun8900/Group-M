@@ -28,28 +28,47 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * Get the latest environment and occupancy data.
- * Example: /sensors/latest?type=Temperature
+ * Get the latest temperature reading.
+ * GET /sensors/latest/temperature
  */
-router.get("/latest", async (req, res) => {
-    try {
-        // Fetch the latest temperature reading
-        const latestTemperature = await Sensor.findOne({ type: "Temperature" }).sort({ timestamp: -1 });
-        // Fetch the latest humidity reading
-        const latestHumidity = await Sensor.findOne({ type: "Humidity" }).sort({ timestamp: -1 });
-        // Fetch the latest people count reading
-        const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
-
-        res.json({
-            temperature: latestTemperature ? latestTemperature.value : "No data", // Default to "No data" if no reading is found
-            humidity: latestHumidity ? latestHumidity.value : "No data",
-            peopleCount: latestPeopleCount ? latestPeopleCount.value : 0 // Default to 0 if no reading is found
-        });
-    } catch (error) {
-        console.error(error.stack);
-        return res.status(500).json({ message: error.message });
-    }
+router.get("/latest/temperature", async (req, res) => {
+  try {
+    const latest = await Sensor.findOne({ type: "Temperature" }).sort({ timestamp: -1 });
+    res.json({ temperature: latest ? latest.value : "No data" });
+  } catch (error) {
+    console.error(error.stack);
+    return res.status(500).json({ message: error.message });
+  }
 });
+
+/**
+ * Get the latest humidity reading.
+ * GET /sensors/latest/humidity
+ */
+router.get("/latest/humidity", async (req, res) => {
+  try {
+    const latest = await Sensor.findOne({ type: "Humidity" }).sort({ timestamp: -1 });
+    res.json({ humidity: latest ? latest.value : "No data" });
+  } catch (error) {
+    console.error(error.stack);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Get the latest people count.
+ * GET /sensors/latest/peoplecount
+ */
+router.get("/latest/peoplecount", async (req, res) => {
+  try {
+    const latest = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
+    res.json({ peopleCount: latest ? latest.value : 0 });
+  } catch (error) {
+    console.error(error.stack);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 
 /**
  * Get historical temperature data (last 1 month).
