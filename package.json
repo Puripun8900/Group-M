@@ -1,0 +1,38 @@
+{
+  "name": "group-m",
+  "version": "1.0.0",
+  "description": "- Kattarin Chaisutthisunthon - Arch Promchan - Puripan Leelapong-Anan - Oumaima Oubihi - Md Rakibuzzaman Rakib",
+  "homepage": "https://github.com/Puripun8900/Group-M#readme",
+  "bugs": {
+    "url": "https://github.com/Puripun8900/Group-M/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Puripun8900/Group-M.git"
+  },
+  "license": "ISC",
+  "author": "Md Rakibuzzaman Rakib",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "nodemon server/server.js",
+    "start": "node server/server.js",
+    "test": "mocha"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.12.2",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "chai-http": "^5.1.1",
+    "mocha": "^11.1.0"
+  }
+}
