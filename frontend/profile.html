@@ -140,6 +140,18 @@
             localStorage.setItem('customerNumber', '000000');
             window.location.href = 'login.html';
         }
+        
+        // Chatbot functions
+        function toggleChatbot() {
+            const chatbotContainer = document.getElementById('chatbot-container');
+            if (chatbotContainer.classList.contains('hidden')) {
+                chatbotContainer.classList.remove('hidden');
+                document.getElementById('chat-button').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+            } else {
+                chatbotContainer.classList.add('hidden');
+                document.getElementById('chat-button').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>';
+            }
+        }
     </script>
 
     <style>
@@ -186,6 +198,53 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Chatbot styles */
+        .chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-button:hover {
+            transform: scale(1.05);
+            background-color: #2563eb;
+        }
+        
+        .chatbot-container {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 400px;
+            height: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 640px) {
+            .chatbot-container {
+                width: 90%;
+                height: 80%;
+                bottom: 80px;
+                right: 5%;
+            }
         }
     </style>
 </head>
@@ -308,6 +367,23 @@
         <p class="text-blue-400 font-bold">LOMAKYLÄ RAKKARANTA</p>
         <p>📞 050 400 0373</p>
         <p>📍 Neljäs Avenjuu 3, 89400 Hyrynsalmi</p>
+    </div>
+    
+    <!-- Chatbot Button -->
+    <div id="chat-button" class="chat-button" onclick="toggleChatbot()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+    </div>
+    
+    <!-- Chatbot Container -->
+    <div id="chatbot-container" class="chatbot-container hidden">
+        <iframe
+            src="https://www.chatbase.co/chatbot-iframe/gxnSSIINfvC7w_miir5U7"
+            width="100%"
+            height="100%"
+            frameborder="0"
+        ></iframe>
     </div>
 </body>
 </html>
