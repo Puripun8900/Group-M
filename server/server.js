@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const routes = require('./routes/sensorRoutes.js');
+const routes = require('./routes/sensorRoutes');
 const connectMongoDB = require('./db/db')
 
 require('dotenv').config();
@@ -11,11 +11,11 @@ app.use(express.json());
 app.use('/sensors', routes);
 
 // serve static file
-app.use(express.static(path.join(__dirname, 'frontend')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Fallback route to serve index.html
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
 //Mongodb connection

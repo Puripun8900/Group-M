@@ -35,7 +35,7 @@ const connectDB = async () => {
 /**
  * logs MongoDB connection lifecycle events for observability
  * mongoose.connection is an instance of an EventEmitter
- * events names: connected, disconnected, error, reconnected, cloe, open
+ * events names: connected, disconnected, error, reconnected, close, open
  */
 mongoose.connection.on('connected', () => {
     console.log('Mongoose connected to database');
