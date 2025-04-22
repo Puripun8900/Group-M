@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - Smart Gym</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Track the current time range
+        let currentTimeRange = 'day';
+        
+        // Get or generate a consistent customer number
+        let customerNumber = localStorage.getItem('customerNumber');
+        if (!customerNumber) {
+            customerNumber = "000" + Math.floor(Math.random() * 1000);
+            localStorage.setItem('customerNumber', customerNumber);
+        }
+        
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('time').innerText = `${hours} : ${minutes}`;
+
+            let greeting = "GOOD MORNING";
+            if (hours >= 12 && hours < 18) greeting = "GOOD AFTERNOON";
+            else if (hours >= 18) greeting = "GOOD EVENING";
+            document.getElementById('greeting').innerText = greeting;
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
+        }
+        setInterval(updateTime, 1000);
+        
+        // Process historical data from API
+        function processHistoricalData(data, timeRange) {
+            // Filter data based on time range
+            const now = new Date();
+            let filteredData = [];
+            
+            if (timeRange === 'day') {
+                // Last 24 hours
+                const oneDayAgo = new Date(now);
+                oneDayAgo.setHours(now.getHours() - 24);
+                filteredData = data.filter(item => new Date(item.timestamp) >= oneDayAgo);
+            } else if (timeRange === 'week') {
+                // Last 7 days
+                const oneWeekAgo = new Date(now);
+                oneWeekAgo.setDate(now.getDate() - 7);
+                filteredData = data.filter(item => new Date(item.timestamp) >= oneWeekAgo);
+            } else {
+                // Last 30 days (month)
+                const oneMonthAgo = new Date(now);
+                oneMonthAgo.setDate(now.getDate() - 30);
+                filteredData = data.filter(item => new Date(item.timestamp) >= oneMonthAgo);
+            }
+            
+            // Group data by time intervals
+            const groupedData = {};
+            const labels = [];
+            
+            if (timeRange === 'day') {
+                // Group by hour
+                for (let i = 0; i < 24; i++) {
+                    const hour = new Date(now);
+                    hour.setHours(now.getHours() - 23 + i);
+                    hour.setMinutes(0, 0, 0);
+                    const hourKey = hour.getHours().toString().padStart(2, '0') + ':00';
+                    labels.push(hourKey);
+                    groupedData[hourKey] = [];
+                }
+                
+                // Add data to groups
+                filteredData.forEach(item => {
+                    const date = new Date(item.timestamp);
+                    const hourKey = date.getHours().toString().padStart(2, '0') + ':00';
+                    if (groupedData[hourKey]) {
+                        groupedData[hourKey].push(item.value);
+                    }
+                });
+            } else if (timeRange === 'week') {
+                // Group by day
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                for (let i = 6; i >= 0; i--) {
+                    const day = new Date(now);
+                    day.setDate(now.getDate() - i);
+                    const dayKey = days[day.getDay()];
+                    labels.push(dayKey);
+                    groupedData[dayKey] = [];
+                }
+                
+                // Add data to groups
+                filteredData.forEach(item => {
+                    const date = new Date(item.timestamp);
+                    const dayKey = days[date.getDay()];
+                    if (groupedData[dayKey]) {
+                        groupedData[dayKey].push(item.value);
+                    }
+                });
+            } else {
+                // Group by date (month)
+                for (let i = 29; i >= 0; i--) {
+                    const day = new Date(now);
+                    day.setDate(now.getDate() - i);
+                    const dayKey = day.getDate() + '/' + (day.getMonth() + 1);
+                    labels.push(dayKey);
+                    groupedData[dayKey] = [];
+                }
+                
+                // Add data to groups
+                filteredData.forEach(item => {
+                    const date = new Date(item.timestamp);
+                    const dayKey = date.getDate() + '/' + (date.getMonth() + 1);
+                    if (groupedData[dayKey]) {
+                        groupedData[dayKey].push(item.value);
+                    }
+                });
+            }
+            
+            // Calculate averages for each group
+            const values = labels.map(label => {
+                const group = groupedData[label];
+                if (group.length === 0) return null;
+                const sum = group.reduce((a, b) => a + b, 0);
+                return (sum / group.length).toFixed(1);
+            });
+            
+            return { labels, values };
+        }
+        
+        window.onload = function() {
+            updateTime();
+            fetchHistoricalData();
+        };
+        
+        async function fetchHistoricalData() {
+            try {
+                console.log("Fetching historical data from API via proxy...");
+                
+                // Use the proxy URLs instead of direct API URLs
+                const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.all([
+                    fetch('/api/sensors/history/temperature'),
+                    fetch('/api/sensors/history/humidity'),
+                    fetch('/api/sensors/history/peoplecount')
+                ]);
+                
+                console.log("Temperature response status:", tempResponse.status);
+                console.log("Humidity response status:", humidityResponse.status);
+                console.log("People count response status:", peopleCountResponse.status);
+                
+                if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
+                    throw new Error("Failed to fetch historical data");
+                }
+                
+                const tempData = await tempResponse.json();
+                const humidityData = await humidityResponse.json();
+                const peopleCountData = await peopleCountResponse.json();
+                
+                console.log("Temperature data sample:", tempData.length > 0 ? tempData[0] : "No data");
+                console.log("Humidity data sample:", humidityData.length > 0 ? humidityData[0] : "No data");
+                console.log("People count data sample:", peopleCountData.length > 0 ? peopleCountData[0] : "No data");
+                
+                // Process data based on current time range
+                const processedTempData = processHistoricalData(tempData, currentTimeRange);
+                const processedHumidityData = processHistoricalData(humidityData, currentTimeRange);
+                const processedPeopleCountData = processHistoricalData(peopleCountData, currentTimeRange);
+                
+                // Create charts
+                createChart('temperatureChart', 'Temperature (°C)', 
+                    processedTempData.labels, 
+                    processedTempData.values, 
+                    'rgba(59, 130, 246, 0.8)'
+                );
+                
+                createChart('humidityChart', 'Humidity (%)', 
+                    processedHumidityData.labels, 
+                    processedHumidityData.values, 
+                    'rgba(16, 185, 129, 0.8)'
+                );
+                
+                createChart('occupancyChart', 'Occupancy (people)', 
+                    processedPeopleCountData.labels, 
+                    processedPeopleCountData.values, 
+                    'rgba(249, 115, 22, 0.8)'
+                );
+                
+                // Display user info
+                const username = localStorage.getItem('username') || "Guest User";
+                document.getElementById('userName').innerText = username;
+                document.getElementById('customerNumber').innerText = customerNumber;
+            } catch (error) {
+                console.error('Error fetching historical data:', error);
+                fallbackToSampleData();
+            }
+        }
+        
+        function fallbackToSampleData() {
+            // Generate sample data for demonstration
+            function generateSampleData(baseValue, variance, count) {
+                const data = [];
+                for (let i = 0; i < count; i++) {
+                    const value = baseValue + (Math.random() * variance * 2 - variance);
+                    data.push(value.toFixed(1));
+                }
+                return data;
+            }
+            
+            // Generate labels based on time range
+            function generateLabels(count, range) {
+                const labels = [];
+                const now = new Date();
+                
+                if (range === 'day') {
+                    // For day view, show hours
+                    for (let i = 0; i < count; i++) {
+                        const time = new Date(now);
+                        time.setHours(time.getHours() - (count - 1) + i);
+                        labels.push(time.getHours().toString().padStart(2, '0') + ':00');
+                    }
+                } else if (range === 'week') {
+                    // For week view, show days of week
+                    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    for (let i = 6; i >= 0; i--) {
+                        const time = new Date(now);
+                        time.setDate(time.getDate() - i);
+                        labels.push(days[time.getDay()]);
+                    }
+                } else if (range === 'month') {
+                    // For month view, show dates
+                    for (let i = 29; i >= 0; i--) {
+                        const time = new Date(now);
+                        time.setDate(time.getDate() - i);
+                        labels.push(time.getDate() + '/' + (time.getMonth() + 1));
+                    }
+                }
+                
+                return labels;
+            }
+            
+            let count;
+            switch(currentTimeRange) {
+                case 'day': count = 24; break;
+                case 'week': count = 7; break;
+                case 'month': count = 30; break;
+                default: count = 24;
+            }
+            
+            const labels = generateLabels(count, currentTimeRange);
+            
+            // Generate sample data
+            const tempData = generateSampleData(22, 3, count);
+            const humidityData = generateSampleData(45, 10, count);
+            const occupancyData = generateSampleData(20, 15, count).map(v => Math.round(Math.max(0, v)));
+            
+            // Create charts with sample data
+            createChart('temperatureChart', 'Temperature (°C)', labels, tempData, 'rgba(59, 130, 246, 0.8)');
+            createChart('humidityChart', 'Humidity (%)', labels, humidityData, 'rgba(16, 185, 129, 0.8)');
+            createChart('occupancyChart', 'Occupancy (people)', labels, occupancyData, 'rgba(249, 115, 22, 0.8)');
+            
+            // Display user info
+            const username = localStorage.getItem('username') || "Guest User";
+            document.getElementById('userName').innerText = username;
+            document.getElementById('customerNumber').innerText = customerNumber;
+        }
+        
+        function createChart(canvasId, label, labels, data, color) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: color,
+                        borderColor: color,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function changeTimeRange(range) {
+            // Update current time range
+            currentTimeRange = range;
+            
+            // Update button styles
+            document.getElementById('btn-day').className = range === 'day' ? 
+                'px-3 py-1 rounded-l-md bg-blue-400 text-white' : 
+                'px-3 py-1 rounded-l-md bg-gray-800 text-white';
+                
+            document.getElementById('btn-week').className = range === 'week' ? 
+                'px-3 py-1 bg-blue-400 text-white' : 
+                'px-3 py-1 bg-gray-800 text-white';
+                
+            document.getElementById('btn-month').className = range === 'month' ? 
+                'px-3 py-1 rounded-r-md bg-blue-400 text-white' : 
+                'px-3 py-1 rounded-r-md bg-gray-800 text-white';
+            
+            // Update time range label
+            let label;
+            switch(range) {
+                case 'day': label = 'Last 24 Hours'; break;
+                case 'week': label = 'Last 7 Days'; break;
+                case 'month': label = 'Last 30 Days'; break;
+                default: label = 'Last 24 Hours';
+            }
+            
+            document.getElementById('timeRangeLabel').innerText = label;
+            
+            // Clear existing charts
+            document.getElementById('temperatureChart').remove();
+            document.getElementById('humidityChart').remove();
+            document.getElementById('occupancyChart').remove();
+            
+            // Create new canvas elements
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.id = 'temperatureChart';
+            tempCanvas.height = 250;
+            document.getElementById('temperatureChartContainer').appendChild(tempCanvas);
+            
+            const humidityCanvas = document.createElement('canvas');
+            humidityCanvas.id = 'humidityChart';
+            humidityCanvas.height = 250;
+            document.getElementById('humidityChartContainer').appendChild(humidityCanvas);
+            
+            const occupancyCanvas = document.createElement('canvas');
+            occupancyCanvas.id = 'occupancyChart';
+            occupancyCanvas.height = 250;
+            document.getElementById('occupancyChartContainer').appendChild(occupancyCanvas);
+            
+            // Fetch new data with the updated time range
+            fetchHistoricalData();
+        }
+    </script>
+    
+    <style>
+        body {
+            background: url('https://i.ibb.co/Z1dTcNGx/Screenshot-2025-02-28-205107.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+        }
+        
+        canvas {
+            background-color: rgba(17, 24, 39, 0.8);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center text-white min-h-screen relative">
+    <!-- Top Section: Logo, Greeting, Time & Date -->
+    <div class="absolute top-6 left-6 flex items-center">
+        <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
+        <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
+    </div>
+    
+    <div class="absolute top-6 right-6 flex space-x-6 text-xl">
+        <h1 id="greeting" class="font-bold text-3xl uppercase">GOOD MORNING</h1>
+        <p id="time" class="text-3xl font-bold">07 : 35</p>
+        <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="w-full max-w-7xl mx-auto mt-28 pb-24 px-6">
+        <!-- Header with Back Button -->
+        <div class="flex justify-between items-center mb-6">
+            <button onclick="window.location.href='index.html';" class="flex items-center text-blue-400">
+                <span class="mr-2">&#x2190;</span> BACK TO DASHBOARD
+            </button>
+            
+            <div class="space-y-1">
+                <p class="text-blue-400 font-bold">MY PROFILE</p>
+                <p class="text-xl" id="userName">Loading...</p>
+                <p class="text-sm">CUSTOMER NUMBER: <span id="customerNumber">Loading...</span></p>
+            </div>
+        </div>
+        
+        <!-- Time Range Selector -->
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-blue-400">HISTORICAL DATA</h2>
+            
+            <div class="flex space-x-4">
+                <span id="timeRangeLabel" class="text-lg">Last 24 Hours</span>
+                <div class="flex bg-gray-800 rounded-md">
+                    <button id="btn-day" onclick="changeTimeRange('day')" class="px-3 py-1 rounded-l-md bg-blue-400 text-white">Day</button>
+                    <button id="btn-week" onclick="changeTimeRange('week')" class="px-3 py-1 bg-gray-800 text-white">Week</button>
+                    <button id="btn-month" onclick="changeTimeRange('month')" class="px-3 py-1 rounded-r-md bg-gray-800 text-white">Month</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Temperature Chart -->
+            <div class="bg-gray-900 bg-opacity-75 p-4 rounded-lg">
+                <h3 class="text-xl text-blue-400 mb-2">TEMPERATURE HISTORY</h3>
+                <div id="temperatureChartContainer" class="h-[250px]">
+                    <canvas id="temperatureChart" height="250"></canvas>
+                </div>
+            </div>
+            
+            <!-- Humidity Chart -->
+            <div class="bg-gray-900 bg-opacity-75 p-4 rounded-lg">
+                <h3 class="text-xl text-blue-400 mb-2">HUMIDITY HISTORY</h3>
+                <div id="humidityChartContainer" class="h-[250px]">
+                    <canvas id="humidityChart" height="250"></canvas>
+                </div>
+            </div>
+            
+            <!-- Occupancy Chart -->
+            <div class="bg-gray-900 bg-opacity-75 p-4 rounded-lg lg:col-span-2">
+                <h3 class="text-xl text-blue-400 mb-2">OCCUPANCY HISTORY</h3>
+                <div id="occupancyChartContainer" class="h-[250px]">
+                    <canvas id="occupancyChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer: Contact Information -->
+    <div class="absolute bottom-6 left-6 text-sm">
+        <p class="text-blue-400 font-bold">LOMAKYLÄ RAKKARANTA</p>
+        <p>📞 050 400 0373</p>
+        <p>📍 Neljäs Avenjuu 3, 89400 Hyrynsalmi</p>
+    </div>
+</body>
+</html>
