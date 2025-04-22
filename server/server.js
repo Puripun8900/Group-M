@@ -11,14 +11,28 @@ app.use(express.json());
 app.use('/sensors', routes);
 app.use('/auth', authRoutes);
 
-// serve static file
+// Serve static files from 'public'
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Fallback route to serve index.html
-app.get('*', (req, res) => {
+// Serve login page at root URL
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'login.html'));
+});
+
+// Serve signup page explicitly
+app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'signup.html'));
 });
 
+// Serve home page (index.html) after login
+app.get('/home', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+});
+
+// Catch-all fallback (optional)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'login.html'));
+});
 //Mongodb connection
 connectMongoDB();
 
