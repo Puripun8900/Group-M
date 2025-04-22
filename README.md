@@ -49,11 +49,10 @@ After research, the following sensors were chosen:
 **Motion Detection** - AS312 (PIR): 
 - https://www.elfadistrelec.fi/fi/as312-m5stickc-pir-anturihattu-m5stack-u054/p/30180767?trackQuery=PIR%20sensor&pos=5&origPos=5&origPageSize=50&track=true&sid=Nv0SPa5dWX&itemList=search
 
-**User Authentication** - PN532 (RFID reader): 
+**User Authentication** - PN532 (RFID reader, Card): 
 - https://www.elfadistrelec.fi/fi/pn532-nfc-ja-rfid-ohjain-shield-arduinolle-adafruit-789/p/30139252?redirectQuery=PN532
 
-**User Authentication** - NXP MIFARE Classic (Card):
-- https://fi.farnell.com/en-FI/nxp/mf1s7030xda4-v1j/rfid-reader-writer-13-56mhz-4kb/dp/2820254
+
 
 ### **3. System Architecture**
 - **Sensors → Raspberry Pi Pico (Data Processing) → Database → Web UI**
