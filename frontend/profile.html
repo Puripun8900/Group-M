@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Log In - Smart Gym</title>
+    <title>Profile - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Global API URL - Use local proxy for development
@@ -13,29 +13,134 @@
         
         function updateTime() {
             const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0'); // Ensures 2-digit format
+            const hours = now.getHours().toString().padStart(2, '0');
             const minutes = now.getMinutes().toString().padStart(2, '0');
             document.getElementById('time').innerText = `${hours} : ${minutes}`;
-            
+
             let greeting = "GOOD MORNING";
-            if (hours >= 12 && hours < 18) {
-                greeting = "GOOD AFTERNOON";
-            } else if (hours >= 18) {
-                greeting = "GOOD EVENING";
-            }
+            if (hours >= 12 && hours < 18) greeting = "GOOD AFTERNOON";
+            else if (hours >= 18) greeting = "GOOD EVENING";
             document.getElementById('greeting').innerText = greeting;
-            
+
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
-        setInterval(updateTime, 60000); // Update time every minute
-        window.onload = updateTime;
         
-        function goToIndexAsGuest() {
-            // Clear any existing user data
-            localStorage.removeItem('token');
+        window.onload = function() {
+            updateTime();
+            setInterval(updateTime, 60000); // Update time every minute
             
-            // Set customer number to 000000 for guest users
+            // Load user data
+            loadUserData();
+        };
+        
+        function loadUserData() {
+            // Get user data from localStorage
+            const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
+                username: "Guest User",
+                name: "Guest User",
+                email: "",
+                customerNumber: "000000"
+            };
+            
+            // Display user data
+            document.getElementById('username').innerText = userInfo.username;
+            document.getElementById('customerNumber').innerText = userInfo.customerNumber;
+            
+            // Set form field values
+            document.getElementById('nameInput').value = userInfo.name;
+            document.getElementById('emailInput').value = userInfo.email;
+        }
+        
+        async function saveProfile() {
+            const nameInput = document.getElementById('nameInput');
+            const emailInput = document.getElementById('emailInput');
+            
+            // Validate inputs
+            if (!nameInput.value.trim()) {
+                showMessage('Name cannot be empty', 'error');
+                return;
+            }
+            
+            if (!emailInput.value.trim() || !/\S+@\S+\.\S+/.test(emailInput.value)) {
+                showMessage('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const saveButton = document.getElementById('saveButton');
+            const originalButtonText = saveButton.innerHTML;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Saving...';
+            
+            try {
+                // Get current user info
+                const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
+                    username: "Guest User",
+                    name: "Guest User",
+                    email: "",
+                    customerNumber: "000000"
+                };
+                
+                // Update user info
+                userInfo.name = nameInput.value;
+                userInfo.email = emailInput.value;
+                
+                // Save updated user info
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                
+                // Also update in userData storage for persistence across logins
+                if (userInfo.username !== "Guest User") {
+                    // Get existing user data
+                    const userData = JSON.parse(localStorage.getItem('userData')) || {};
+                    
+                    // Update user data
+                    userData[userInfo.username] = {
+                        name: nameInput.value,
+                        email: emailInput.value,
+                        customerNumber: userInfo.customerNumber
+                    };
+                    
+                    // Save updated user data
+                    localStorage.setItem('userData', JSON.stringify(userData));
+                }
+                
+                // Show success message
+                showMessage('Profile updated successfully', 'success');
+                
+                // Reset button state
+                saveButton.disabled = false;
+                saveButton.innerHTML = originalButtonText;
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showMessage('Failed to update profile. Please try again.', 'error');
+                
+                // Reset button state
+                saveButton.disabled = false;
+                saveButton.innerHTML = originalButtonText;
+            }
+        }
+        
+        function showMessage(message, type) {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = message;
+            
+            if (type === 'error') {
+                messageElement.className = 'mt-4 p-2 bg-red-500 text-white rounded-md text-center';
+            } else {
+                messageElement.className = 'mt-4 p-2 bg-green-500 text-white rounded-md text-center';
+            }
+            
+            messageElement.classList.remove('hidden');
+            
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                messageElement.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function logout() {
+            // Keep the user info in localStorage but set as guest
             const guestInfo = {
                 username: "Guest User",
                 name: "Guest User",
@@ -43,101 +148,8 @@
                 customerNumber: "000000"
             };
             localStorage.setItem('userInfo', JSON.stringify(guestInfo));
-            
-            // Redirect to index
-            window.location.href = 'index.html';
-        }
-        
-        // Generate a consistent customer number based on username
-        function generateCustomerNumber(username) {
-            // Simple hash function to generate a number from a string
-            let hash = 0;
-            for (let i = 0; i < username.length; i++) {
-                const char = username.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // Convert to 32bit integer
-            }
-            
-            // Make sure it's positive and format as a 6-digit number
-            const positiveHash = Math.abs(hash);
-            return positiveHash.toString().padStart(6, '0').substring(0, 6);
-        }
-        
-        async function validateLogin() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            // Show loading state
-            const loginButton = document.getElementById('loginButton');
-            const originalButtonText = loginButton.innerHTML;
-            loginButton.disabled = true;
-            loginButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Logging in...';
-    
-            if (username.trim() === '' || password.trim() === '') {
-                showError("Username and password are required");
-                resetButton();
-                return;
-            }
-    
-            try {
-                // For demo purposes, we'll simulate a successful login
-                // In a real app, you would connect to your authentication API
-                
-                // Generate a consistent customer number for this username
-                const customerNumber = generateCustomerNumber(username);
-                
-                // Get stored user data if available
-                let userData = JSON.parse(localStorage.getItem('userData')) || {};
-                
-                // If we don't have data for this user yet, create it
-                if (!userData[username]) {
-                    userData[username] = {
-                        name: username,
-                        email: '',
-                        customerNumber: customerNumber
-                    };
-                }
-                
-                // Create user info object
-                const userInfo = {
-                    username: username,
-                    name: userData[username].name || username,
-                    email: userData[username].email || '',
-                    customerNumber: userData[username].customerNumber || customerNumber
-                };
-                
-                // Store the user info in localStorage
-                localStorage.setItem('userInfo', JSON.stringify(userInfo));
-                
-                // Store user data for future logins
-                localStorage.setItem('userData', JSON.stringify(userData));
-                
-                // Simulate token
-                localStorage.setItem('token', 'demo-token-' + Date.now());
-                
-                // Redirect to index page
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error('Error during login:', error);
-                showError(error.message || "Login failed. Please try again.");
-                resetButton();
-            }
-            
-            function resetButton() {
-                loginButton.disabled = false;
-                loginButton.innerHTML = originalButtonText;
-            }
-        }
-        
-        function showError(message) {
-            const errorElement = document.getElementById('error-message');
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-            
-            // Hide the error message after 5 seconds
-            setTimeout(() => {
-                errorElement.classList.add('hidden');
-            }, 5000);
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
         }
         
         // Chatbot functions
@@ -157,10 +169,6 @@
             background: url('https://i.ibb.co/Z1dTcNGx/Screenshot-2025-02-28-205107.png') no-repeat center center fixed;
             background-size: cover;
             font-family: Arial, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
         }
         
         /* Chatbot styles */
@@ -209,23 +217,12 @@
                 right: 5%;
             }
         }
-        
-        .error-message {
-            background-color: rgba(239, 68, 68, 0.9);
-            color: white;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
     </style>
 </head>
-<body class="text-white relative flex flex-col items-center">
-
+<body class="flex flex-col items-center text-white min-h-screen relative">
     <!-- Top Section: Logo, Greeting, Time & Date -->
     <div class="absolute top-6 left-6 flex items-center">
-        <a href="javascript:void(0)" onclick="goToIndexAsGuest()" class="flex items-center">
+        <a href="index.html" class="flex items-center">
             <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
             <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
         </a>
@@ -236,36 +233,62 @@
         <p id="time" class="text-3xl font-bold">07 : 35</p>
         <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
     </div>
-
-    <!-- Log In Form -->
-    <div class="w-full flex justify-center items-center mt-16 flex-grow">
-        <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg w-[400px]">
-            <h2 class="text-2xl text-center text-blue-400 font-bold">LOG IN</h2>
+    
+    <!-- Main Content -->
+    <div class="w-full max-w-4xl mx-auto mt-32 mb-16 px-4">
+        <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg">
+            <h2 class="text-2xl text-blue-400 font-bold mb-6">MY PROFILE</h2>
             
-            <!-- Error Message -->
-            <div id="error-message" class="error-message mt-4 hidden"></div>
-            
-            <div class="mt-4 space-y-4">
-                <div>
-                    <label for="username" class="text-sm">Username</label>
-                    <input type="text" id="username" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter username">
-                </div>
-                <div>
-                    <label for="password" class="text-sm">Password</label>
-                    <input type="password" id="password" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter password">
+            <!-- User Info -->
+            <div class="mb-8">
+                <div class="flex flex-col md:flex-row justify-between mb-4">
+                    <div>
+                        <p class="text-sm text-gray-400">Username (cannot be changed)</p>
+                        <p class="text-xl font-bold" id="username">Loading...</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Customer Number</p>
+                        <p class="text-xl font-bold" id="customerNumber">Loading...</p>
+                    </div>
                 </div>
             </div>
-            <div class="mt-6">
-                <button id="loginButton" type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-m  type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">LOG IN</button>
-            </div>
-            <div class="mt-4 text-center">
-                <p class="text-sm">Don't have an account? <a href="signup.html" class="text-blue-400 hover:underline">Sign Up</a></p>
+            
+            <!-- Profile Form -->
+            <div>
+                <div id="message" class="hidden"></div>
+                
+                <div class="mb-4">
+                    <label for="nameInput" class="block text-sm text-gray-400 mb-1">Name</label>
+                    <input type="text" id="nameInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter your name">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="emailInput" class="block text-sm text-gray-400 mb-1">Email</label>
+                    <input type="email" id="emailInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter your email">
+                </div>
+                
+                <div class="flex justify-between">
+                    <button id="saveButton" type="button" onclick="saveProfile()" class="px-6 py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">
+                        SAVE CHANGES
+                    </button>
+                    
+                    <button type="button" onclick="window.location.href='index.html'" class="px-6 py-3 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors">
+                        BACK TO DASHBOARD
+                    </button>
+                </div>
             </div>
         </div>
+        
+        <!-- Logout Button -->
+        <div class="mt-6 text-center">
+            <button type="button" onclick="logout()" class="text-blue-400 flex items-center mx-auto hover:underline">
+                <span class="mr-2">&#x2192;</span> LOG OUT
+            </button>
+        </div>
     </div>
-
+    
     <!-- Footer: Contact Information -->
-    <div class="absolute bottom-8 left-6 text-sm">
+    <div class="absolute bottom-6 left-6 text-sm">
         <p class="text-blue-400 font-bold">LOMAKYLÄ RAKKARANTA</p>
         <p>📞 050 400 0373</p>
         <p>📍 Neljäs Avenjuu 3, 89400 Hyrynsalmi</p>
@@ -274,7 +297,7 @@
     <!-- Chatbot Button -->
     <div id="chat-button" class="chat-button" onclick="toggleChatbot()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a  stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
     </div>
     
