@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Sensor = require('../models/sensorSchema');
+const authenticateToken = require('../middleware/auth');
 
 
 /**
  * Fetch all sensor data or filter by sensor type.
  * Example: /sensors?type=Temperature 
  */
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
     try {
         const { type } = req.query; // Extract the "type" query parameter (e.g. Temperature, Humidity, )
 
@@ -31,7 +32,7 @@ router.get("/", async (req, res) => {
  * Get the latest temperature reading.
  * GET /sensors/latest/temperature
  */
-router.get("/latest/temperature", async (req, res) => {
+router.get("/latest/temperature", authenticateToken, async (req, res) => {
   try {
     const latest = await Sensor.findOne({ type: "Temperature" }).sort({ timestamp: -1 });
     res.json({ temperature: latest ? latest.value : "No data" });
@@ -45,7 +46,7 @@ router.get("/latest/temperature", async (req, res) => {
  * Get the latest humidity reading.
  * GET /sensors/latest/humidity
  */
-router.get("/latest/humidity", async (req, res) => {
+router.get("/latest/humidity", authenticateToken, async (req, res) => {
   try {
     const latest = await Sensor.findOne({ type: "Humidity" }).sort({ timestamp: -1 });
     res.json({ humidity: latest ? latest.value : "No data" });
@@ -59,7 +60,7 @@ router.get("/latest/humidity", async (req, res) => {
  * Get the latest people count.
  * GET /sensors/latest/peoplecount
  */
-router.get("/latest/peoplecount", async (req, res) => {
+router.get("/latest/peoplecount", authenticateToken, async (req, res) => {
   try {
     const latest = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
     res.json({ peopleCount: latest ? latest.value : 0 });
@@ -74,7 +75,7 @@ router.get("/latest/peoplecount", async (req, res) => {
  * Get historical temperature data (last 1 month).
  * Example: /history/temperature
  */
-router.get("/history/temperature", async (req, res) => {
+router.get("/history/temperature", authenticateToken, async (req, res) => {
     try {
         const oneMonthAgo = new Date(); // Get the current date
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
@@ -93,7 +94,7 @@ router.get("/history/temperature", async (req, res) => {
  * Get historical humidity data (last 1 month).
  * Example: /history/humidity
  */
-router.get("/history/humidity", async (req, res) => {
+router.get("/history/humidity", authenticateToken, async (req, res) => {
     try {
         const oneMonthAgo = new Date(); // Get the current date
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
@@ -112,7 +113,7 @@ router.get("/history/humidity", async (req, res) => {
  * Get historical people count data (last 1 month).
  * Example: /history/peoplecount
  */
-router.get("/history/peoplecount", async (req, res) => {
+router.get("/history/peoplecount", authenticateToken, async (req, res) => {
     try {
         const oneMonthAgo = new Date(); // Get the current date
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
@@ -182,7 +183,7 @@ router.post("/", async (req, res) => {
  * Delete sensor data by ID.
  * Example: DELETE /sensors/64f1b2c8e4b0a1a2b3c4d5e6
  */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params; // Extract the ID from the request parameters
 
@@ -209,7 +210,7 @@ router.delete("/:id", async (req, res) => {
  * Example: DELETE /sensors?startDate=2025-03-01&endDate=2025-03-15
  * date format: YYYY-MM-DD
  */
-router.delete("/", async (req, res) => {
+router.delete("/", authenticateToken, async (req, res) => {
     try {
         const { startDate, endDate } = req.query; // Extract startDate and endDate from query parameters
 
@@ -260,7 +261,7 @@ router.delete("/", async (req, res) => {
  * Update sensor data by ID.
  * Example: PUT /sensors/64f1b2c8e4b0a1a2b3c4d5e6
  */
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params; // Extract the ID from the request parameters
 
