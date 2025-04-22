@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Sign Up - Smart Gym</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Global API URL - Use local proxy for development
+        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
+        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0'); // Ensures 2-digit format
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('time').innerText = `${hours} : ${minutes}`;
+            
+            let greeting = "GOOD MORNING";
+            if (hours >= 12 && hours < 18) {
+                greeting = "GOOD AFTERNOON";
+            } else if (hours >= 18) {
+                greeting = "GOOD EVENING";
+            }
+            document.getElementById('greeting').innerText = greeting;
+            
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
+        }
+        setInterval(updateTime, 60000); // Update time every minute
+        window.onload = updateTime;
+        
+        function goToIndexAsGuest() {
+            // Clear any existing user data
+            localStorage.removeItem('token');
+            
+            // Set customer number to 000000 for guest users
+            const guestInfo = {
+                username: "Guest User",
+                name: "Guest User",
+                email: "",
+                customerNumber: "000000"
+            };
+            localStorage.setItem('userInfo', JSON.stringify(guestInfo));
+            
+            // Redirect to index
+            window.location.href = 'index.html';
+        }
+        
+        // Generate a consistent customer number based on username
+        function generateCustomerNumber(username) {
+            // Simple hash function to generate a number from a string
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                const char = username.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            
+            // Make sure it's positive and format as a 6-digit number
+            const positiveHash = Math.abs(hash);
+            return positiveHash.toString().padStart(6, '0').substring(0, 6);
+        }
+        
+        async function validateSignup() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Show loading state
+            const signupButton = document.getElementById('signupButton');
+            const originalButtonText = signupButton.innerHTML;
+            signupButton.disabled = true;
+            signupButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Signing up...';
+    
+            // Validate inputs
+            if (username.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
+                showError("All fields are required");
+                resetButton();
+                return;
+            }
+    
+            if (password !== confirmPassword) {
+                showError("Passwords do not match");
+                resetButton();
+                return;
+            }
+    
+            if (!/\S+@\S+\.\S+/.test(email)) {
+                showError("Please enter a valid email address");
+                resetButton();
+                return;
+            }
+    
+            try {
+                // For demo purposes, we'll simulate a successful signup
+                // In a real app, you would connect to your authentication API
+                
+                // Generate a consistent customer number for this username
+                const customerNumber = generateCustomerNumber(username);
+                
+                // Get existing user data or initialize new object
+                const storedUserData = localStorage.getItem('userData');
+                const userData = storedUserData ? JSON.parse(storedUserData) : {};
+                
+                // Update or add data for this username
+                userData[username] = {
+                    customerNumber: customerNumber,
+                    email: email,
+                    name: username
+                };
+                
+                // Store updated data
+                localStorage.setItem('userData', JSON.stringify(userData));
+                
+                // Show success message
+                showSuccess("Account created successfully! Redirecting to login...");
+                
+                // Redirect to login page after a short delay
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            } catch (error) {
+                console.error('Error during signup:', error);
+                showError(error.message || "Signup failed. Please try again.");
+                resetButton();
+            }
+            
+            function resetButton() {
+                signupButton.disabled = false;
+                signupButton.innerHTML = originalButtonText;
+            }
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            const successElement = document.getElementById('success-message');
+            
+            successElement.classList.add('hidden');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            
+            // Hide the error message after 5 seconds
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const errorElement = document.getElementById('error-message');
+            const successElement = document.getElementById('success-message');
+            
+            errorElement.classList.add('hidden');
+            successElement.textContent = message;
+            successElement.classList.remove('hidden');
+        }
+        
+        // Chatbot functions
+        function toggleChatbot() {
+            const chatbotContainer = document.getElementById('chatbot-container');
+            if (chatbotContainer.classList.contains('hidden')) {
+                chatbotContainer.classList.remove('hidden');
+                document.getElementById('chat-button').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+            } else {
+                chatbotContainer.classList.add('hidden');
+                document.getElementById('chat-button').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>';
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: url('https://i.ibb.co/Z1dTcNGx/Screenshot-2025-02-28-205107.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        /* Chatbot styles */
+        .chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-button:hover {
+            transform: scale(1.05);
+            background-color: #2563eb;
+        }
+        
+        .chatbot-container {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 400px;
+            height: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 640px) {
+            .chatbot-container {
+                width: 90%;
+                height: 80%;
+                bottom: 80px;
+                right: 5%;
+            }
+        }
+        
+        .error-message {
+            background-color: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .success-message {
+            background-color: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-white relative flex flex-col items-center">
+
+    <!-- Top Section: Logo, Greeting, Time & Date -->
+    <div class="absolute top-6 left-6 flex items-center">
+        <a href="javascript:void(0)" onclick="goToIndexAsGuest()" class="flex items-center">
+            <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
+            <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
+        </a>
+    </div>
+    
+    <div class="absolute top-6 right-6 flex space-x-6 text-xl">
+        <h1 id="greeting" class="font-bold text-3xl uppercase">GOOD MORNING</h1>
+        <p id="time" class="text-3xl font-bold">07 : 35</p>
+        <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div class="w-full flex justify-center items-center mt-16 flex-grow">
+        <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg w-[400px]">
+            <h2 class="text-2xl text-center text-blue-400 font-bold">CREATE ACCOUNT</h2>
+            
+            <!-- Error Message -->
+            <div id="error-message" class="error-message mt-4 hidden"></div>
+            
+            <!-- Success Message -->
+            <div id="success-message" class="success-message mt-4 hidden"></div>
+            
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="username" class="text-sm">Username</label>
+                    <input type="text" id="username" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter username">
+                </div>
+                <div>
+                    <label for="email" class="text-sm">Email</label>
+                    <input type="email" id="email" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter email">
+                </div>
+                <div>
+                    <label for="password" class="text-sm">Password</label>
+                    <input type="password" id="password" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Enter password">
+                </div>
+                <div>
+                    <label for="confirmPassword" class="text-sm">Confirm Password</label>
+                    <input type="password" id="confirmPassword" class="w-full p-3 mt-2 bg-gray-700 text-white rounded-md" placeholder="Confirm password">
+                </div>
+            </div>
+            <div class="mt-6">
+                <button id="signupButton" type="button" onclick="validateSignup()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">SIGN UP</button>
+            </div>
+            <div class="mt-4 text-center">
+                <p class="text-sm">Already have an account? <a href="login.html" class="text-blue-400 hover:underline">Log In</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer: Contact Information -->
+    <div class="absolute bottom-8 left-6 text-sm">
+        <p class="text-blue-400 font-bold">LOMAKYLÄ RAKKARANTA</p>
+        <p>📞 050 400 0373</p>
+        <p>📍 Neljäs Avenjuu 3, 89400 Hyrynsalmi</p>
+    </div>
+    
+    <!-- Chatbot Button -->
+    <div id="chat-button" class="chat-button" onclick="toggleChatbot()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+    </div>
+    
+    <!-- Chatbot Container -->
+    <div id="chatbot-container" class="chatbot-container hidden">
+        <iframe
+            src="https://www.chatbase.co/chatbot-iframe/gxnSSIINfvC7w_miir5U7"
+            width="100%"
+            height="100%"
+            frameborder="0"
+            allow="microphone"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        ></iframe>
+    </div>
+</body>
+</html>
