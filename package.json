@@ -13,7 +13,7 @@
   "license": "ISC",
   "author": "Md Rakibuzzaman Rakib",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "server/server.js",
   "directories": {
     "test": "test"
   },
