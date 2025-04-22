@@ -7,8 +7,9 @@
     <title>Log In - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Global API URL
+        // Global API URL - Use local proxy for development
         const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
+        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
         
         function updateTime() {
             const now = new Date();
@@ -32,14 +33,34 @@
         
         function goToIndexAsGuest() {
             // Clear any existing user data
-            localStorage.removeItem('username');
-            localStorage.removeItem('email');
+            localStorage.removeItem('token');
             
             // Set customer number to 000000 for guest users
-            localStorage.setItem('customerNumber', '000000');
+            const guestInfo = {
+                username: "Guest User",
+                name: "Guest User",
+                email: "",
+                customerNumber: "000000"
+            };
+            localStorage.setItem('userInfo', JSON.stringify(guestInfo));
             
             // Redirect to index
             window.location.href = 'index.html';
+        }
+        
+        // Generate a consistent customer number based on username
+        function generateCustomerNumber(username) {
+            // Simple hash function to generate a number from a string
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                const char = username.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            
+            // Make sure it's positive and format as a 6-digit number
+            const positiveHash = Math.abs(hash);
+            return positiveHash.toString().padStart(6, '0').substring(0, 6);
         }
         
         async function validateLogin() {
@@ -53,48 +74,52 @@
             loginButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Logging in...';
     
             if (username.trim() === '' || password.trim() === '') {
+                showError("Username and password are required");
                 resetButton();
                 return;
             }
     
             try {
-                // In a production environment, you would connect to the API here
-                /*
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, password }),
-                });
+                // For demo purposes, we'll simulate a successful login
+                // In a real app, you would connect to your authentication API
                 
-                if (!response.ok) {
-                    throw new Error('Login failed');
+                // Generate a consistent customer number for this username
+                const customerNumber = generateCustomerNumber(username);
+                
+                // Get stored user data if available
+                let userData = JSON.parse(localStorage.getItem('userData')) || {};
+                
+                // If we don't have data for this user yet, create it
+                if (!userData[username]) {
+                    userData[username] = {
+                        name: username,
+                        email: '',
+                        customerNumber: customerNumber
+                    };
                 }
                 
-                const data = await response.json();
-                localStorage.setItem('token', data.token);
-                */
+                // Create user info object
+                const userInfo = {
+                    username: username,
+                    name: userData[username].name || username,
+                    email: userData[username].email || '',
+                    customerNumber: userData[username].customerNumber || customerNumber
+                };
                 
-                // For demonstration purposes, we'll store the username
-                localStorage.setItem('username', username);
+                // Store the user info in localStorage
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
                 
-                // Use the email from signup if available, otherwise create a default one
-                if (!localStorage.getItem('email')) {
-                    const email = `${username.toLowerCase()}@example.com`;
-                    localStorage.setItem('email', email);
-                }
+                // Store user data for future logins
+                localStorage.setItem('userData', JSON.stringify(userData));
                 
-                // Generate a customer number if it doesn't exist
-                if (!localStorage.getItem('customerNumber') || localStorage.getItem('customerNumber') === '000000') {
-                    const customerNumber = "000" + Math.floor(Math.random() * 1000);
-                    localStorage.setItem('customerNumber', customerNumber);
-                }
+                // Simulate token
+                localStorage.setItem('token', 'demo-token-' + Date.now());
                 
                 // Redirect to index page
                 window.location.href = 'index.html';
             } catch (error) {
                 console.error('Error during login:', error);
+                showError(error.message || "Login failed. Please try again.");
                 resetButton();
             }
             
@@ -102,6 +127,17 @@
                 loginButton.disabled = false;
                 loginButton.innerHTML = originalButtonText;
             }
+        }
+        
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            
+            // Hide the error message after 5 seconds
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
         }
         
         // Chatbot functions
@@ -173,6 +209,16 @@
                 right: 5%;
             }
         }
+        
+        .error-message {
+            background-color: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body class="text-white relative flex flex-col items-center">
@@ -195,6 +241,10 @@
     <div class="w-full flex justify-center items-center mt-16 flex-grow">
         <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg w-[400px]">
             <h2 class="text-2xl text-center text-blue-400 font-bold">LOG IN</h2>
+            
+            <!-- Error Message -->
+            <div id="error-message" class="error-message mt-4 hidden"></div>
+            
             <div class="mt-4 space-y-4">
                 <div>
                     <label for="username" class="text-sm">Username</label>
@@ -206,7 +256,7 @@
                 </div>
             </div>
             <div class="mt-6">
-                <button id="loginButton" type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">LOG IN</button>
+                <button id="loginButton" type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-m  type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">LOG IN</button>
             </div>
             <div class="mt-4 text-center">
                 <p class="text-sm">Don't have an account? <a href="signup.html" class="text-blue-400 hover:underline">Sign Up</a></p>
@@ -235,6 +285,8 @@
             width="100%"
             height="100%"
             frameborder="0"
+            allow="microphone"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         ></iframe>
     </div>
 </body>
