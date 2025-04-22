@@ -27,3 +27,6 @@ const port =  PORT || 3000; // Use environment variable for port to host
 app.listen(port, () => {
     console.log(`Server is listening at http://localhost:${port}`);
 });
+
+
+module.exports = app;
