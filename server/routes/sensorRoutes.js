@@ -2,15 +2,16 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Sensor = require('../models/sensorSchema');
+const authenticateToken = require('../middleware/auth');
 
 
 /**
  * Fetch all sensor data or filter by sensor type.
- * Example: /sensors?type=Temperature
+ * Example: /sensors?type=Temperature 
  */
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
     try {
-        const { type } = req.query; // Extract the "type" query parameter (e.g., Temperature, Humidity, etc.)
+        const { type } = req.query; // Extract the "type" query parameter (e.g. Temperature, Humidity, )
 
         // Build the query object
         let query = {};
@@ -20,7 +21,7 @@ router.get("/", async (req, res) => {
 
         // Fetch data based on the query
         const sensors = await Sensor.find(query);
-        res.json(sensors); 
+        res.status(200).json(sensors); 
     } catch (error) {
         console.error(error.stack);
         return res.status(500).json({ message: error.message });
@@ -28,34 +29,53 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * Get the latest environment and occupancy data.
- * Example: /sensors/latest
+ * Get the latest temperature reading.
+ * GET /sensors/latest/temperature
  */
-router.get("/latest", async (req, res) => {
-    try {
-        // Fetch the latest temperature reading
-        const latestTemperature = await Sensor.findOne({ type: "Temperature" }).sort({ timestamp: -1 });
-        // Fetch the latest humidity reading
-        const latestHumidity = await Sensor.findOne({ type: "Humidity" }).sort({ timestamp: -1 });
-        // Fetch the latest people count reading
-        const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
-
-        res.json({
-            temperature: latestTemperature ? latestTemperature.value : "No data", // Default to "No data" if no reading is found
-            humidity: latestHumidity ? latestHumidity.value : "No data",
-            peopleCount: latestPeopleCount ? latestPeopleCount.value : 0 // Default to 0 if no reading is found
-        });
-    } catch (error) {
-        console.error(error.stack);
-        return res.status(500).json({ message: error.message });
-    }
+router.get("/latest/temperature", authenticateToken, async (req, res) => {
+  try {
+    const latest = await Sensor.findOne({ type: "Temperature" }).sort({ timestamp: -1 });
+    res.json({ temperature: latest ? latest.value : "No data" });
+  } catch (error) {
+    console.error(error.stack);
+    return res.status(500).json({ message: error.message });
+  }
 });
+
+/**
+ * Get the latest humidity reading.
+ * GET /sensors/latest/humidity
+ */
+router.get("/latest/humidity", authenticateToken, async (req, res) => {
+  try {
+    const latest = await Sensor.findOne({ type: "Humidity" }).sort({ timestamp: -1 });
+    res.json({ humidity: latest ? latest.value : "No data" });
+  } catch (error) {
+    console.error(error.stack);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * Get the latest people count.
+ * GET /sensors/latest/peoplecount
+ */
+router.get("/latest/peoplecount", authenticateToken, async (req, res) => {
+  try {
+    const latest = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
+    res.json({ peopleCount: latest ? latest.value : 0 });
+  } catch (error) {
+    console.error(error.stack);
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 
 /**
  * Get historical temperature data (last 1 month).
  * Example: /history/temperature
  */
-router.get("/history/temperature", async (req, res) => {
+router.get("/history/temperature", authenticateToken, async (req, res) => {
     try {
         const oneMonthAgo = new Date(); // Get the current date
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
@@ -74,7 +94,7 @@ router.get("/history/temperature", async (req, res) => {
  * Get historical humidity data (last 1 month).
  * Example: /history/humidity
  */
-router.get("/history/humidity", async (req, res) => {
+router.get("/history/humidity", authenticateToken, async (req, res) => {
     try {
         const oneMonthAgo = new Date(); // Get the current date
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
@@ -93,7 +113,7 @@ router.get("/history/humidity", async (req, res) => {
  * Get historical people count data (last 1 month).
  * Example: /history/peoplecount
  */
-router.get("/history/peoplecount", async (req, res) => {
+router.get("/history/peoplecount", authenticateToken, async (req, res) => {
     try {
         const oneMonthAgo = new Date(); // Get the current date
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
@@ -163,7 +183,7 @@ router.post("/", async (req, res) => {
  * Delete sensor data by ID.
  * Example: DELETE /sensors/64f1b2c8e4b0a1a2b3c4d5e6
  */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params; // Extract the ID from the request parameters
 
@@ -190,7 +210,7 @@ router.delete("/:id", async (req, res) => {
  * Example: DELETE /sensors?startDate=2025-03-01&endDate=2025-03-15
  * date format: YYYY-MM-DD
  */
-router.delete("/", async (req, res) => {
+router.delete("/", authenticateToken, async (req, res) => {
     try {
         const { startDate, endDate } = req.query; // Extract startDate and endDate from query parameters
 
@@ -241,7 +261,7 @@ router.delete("/", async (req, res) => {
  * Update sensor data by ID.
  * Example: PUT /sensors/64f1b2c8e4b0a1a2b3c4d5e6
  */
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, async (req, res) => {
     try {
         const { id } = req.params; // Extract the ID from the request parameters
 
