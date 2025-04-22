@@ -1,8 +1,5 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const path = require('path');
-
-dotenv.config({path: path.resolve(__dirname, '../.env')});
+const { MONGO_URI, DB_NAME, NODE_ENV } = require('../config/config');
 
 /**
  * Async function to connect to the MongoDB
@@ -10,14 +7,13 @@ dotenv.config({path: path.resolve(__dirname, '../.env')});
  */
 const connectDB = async () => {
     try {
-        const { MONGO_URI, DB_NAME, NODE_ENV } = process.env;
         if (!MONGO_URI || !DB_NAME || !NODE_ENV) {
             console.error('Missiing environment variable from .env');
             process.exit(1);
         };
 
         await mongoose.connect(MONGO_URI, {
-            dbName: DB_NAME || 'gymdb',
+            dbName: DB_NAME,
             serverSelectionTimeoutMS: 5000
         });
 
@@ -35,7 +31,7 @@ const connectDB = async () => {
 /**
  * logs MongoDB connection lifecycle events for observability
  * mongoose.connection is an instance of an EventEmitter
- * events names: connected, disconnected, error, reconnected, cloe, open
+ * events names: connected, disconnected, error, reconnected, close, open
  */
 mongoose.connection.on('connected', () => {
     console.log('Mongoose connected to database');
