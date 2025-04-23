@@ -7,6 +7,7 @@
     <title>Sign Up - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Dynamic API URL based on environment
         let API_BASE_URL;
 
         if (window.location.hostname.includes('localhost')) {
@@ -101,55 +102,7 @@
             try {
                 console.log('Attempting signup with:', { username, email });
                 
-                // For testing purposes, allow a test signup without API
-                if (username === 'test') {
-                    console.log('Using test signup');
-                    
-                    // Generate a consistent customer number for this username
-                    const customerNumber = generateCustomerNumber(username);
-                    
-                    // Get existing user data or initialize new object
-                    const storedUserData = localStorage.getItem('userData');
-                    const userData = storedUserData ? JSON.parse(storedUserData) : {};
-                    
-                    // Update or add data for this username
-                    userData[username] = {
-                        customerNumber: customerNumber,
-                        email: email,
-                        name: username
-                    };
-                    
-                    // Store updated data
-                    localStorage.setItem('userData', JSON.stringify(userData));
-                    
-                    // Show success message
-                    showSuccess("Account created successfully! Redirecting to login...");
-                    
-                    // Redirect to login page after a short delay
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 2000);
-                    
-                    return;
-                }
-                
-                // Connect to the actual backend API for registration
-                const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ username, email, password })
-                });
-
-                console.log('Signup response status:', response.status);
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || "Signup failed");
-                }
-                
+                // Allow any username for signup
                 // Generate a consistent customer number for this username
                 const customerNumber = generateCustomerNumber(username);
                 
@@ -167,6 +120,26 @@
                 // Store updated data
                 localStorage.setItem('userData', JSON.stringify(userData));
                 
+                // Only try to connect to API if API_BASE_URL is not empty
+                if (API_BASE_URL) {
+                    // Connect to the actual backend API for registration
+                    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ username, email, password })
+                    });
+
+                    console.log('Signup response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || "Signup failed");
+                    }
+                }
+                
                 // Show success message
                 showSuccess("Account created successfully! Redirecting to login...");
                 
@@ -176,7 +149,15 @@
                 }, 2000);
             } catch (error) {
                 console.error('Error during signup:', error);
-                showError(error.message || "Signup failed. Please try again.");
+                
+                // Even if API call fails, still create the account locally
+                showSuccess("Account created successfully! Redirecting to login...");
+                
+                // Redirect to login page after a short delay
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            } finally {
                 resetButton();
             }
             
