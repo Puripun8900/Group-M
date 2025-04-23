@@ -7,9 +7,13 @@
     <title>Sign Up - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Global API URL - Use local proxy for development
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
-        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        let API_BASE_URL;
+
+        if (window.location.hostname.includes('localhost')) {
+            API_BASE_URL = 'http://localhost:3030';
+        } else {
+            API_BASE_URL = '';
+        }
         
         function updateTime() {
             const now = new Date();
@@ -74,29 +78,77 @@
             const originalButtonText = signupButton.innerHTML;
             signupButton.disabled = true;
             signupButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Signing up...';
-    
+
             // Validate inputs
             if (username.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
                 showError("All fields are required");
                 resetButton();
                 return;
             }
-    
+
             if (password !== confirmPassword) {
                 showError("Passwords do not match");
                 resetButton();
                 return;
             }
-    
+
             if (!/\S+@\S+\.\S+/.test(email)) {
                 showError("Please enter a valid email address");
                 resetButton();
                 return;
             }
-    
+
             try {
-                // For demo purposes, we'll simulate a successful signup
-                // In a real app, you would connect to your authentication API
+                console.log('Attempting signup with:', { username, email });
+                
+                // For testing purposes, allow a test signup without API
+                if (username === 'test') {
+                    console.log('Using test signup');
+                    
+                    // Generate a consistent customer number for this username
+                    const customerNumber = generateCustomerNumber(username);
+                    
+                    // Get existing user data or initialize new object
+                    const storedUserData = localStorage.getItem('userData');
+                    const userData = storedUserData ? JSON.parse(storedUserData) : {};
+                    
+                    // Update or add data for this username
+                    userData[username] = {
+                        customerNumber: customerNumber,
+                        email: email,
+                        name: username
+                    };
+                    
+                    // Store updated data
+                    localStorage.setItem('userData', JSON.stringify(userData));
+                    
+                    // Show success message
+                    showSuccess("Account created successfully! Redirecting to login...");
+                    
+                    // Redirect to login page after a short delay
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                    
+                    return;
+                }
+                
+                // Connect to the actual backend API for registration
+                const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                console.log('Signup response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Signup failed");
+                }
                 
                 // Generate a consistent customer number for this username
                 const customerNumber = generateCustomerNumber(username);

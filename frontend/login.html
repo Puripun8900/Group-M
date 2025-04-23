@@ -7,9 +7,14 @@
     <title>Log In - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Global API URL - Use local proxy for development
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
-        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        
+        let API_BASE_URL;
+
+        if (window.location.hostname.includes('localhost')) {
+            API_BASE_URL = 'http://localhost:3030';
+        } else {
+            API_BASE_URL = '';
+        }
         
         function updateTime() {
             const now = new Date();
@@ -72,16 +77,65 @@
             const originalButtonText = loginButton.innerHTML;
             loginButton.disabled = true;
             loginButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Logging in...';
-    
+
             if (username.trim() === '' || password.trim() === '') {
                 showError("Username and password are required");
                 resetButton();
                 return;
             }
-    
+
             try {
-                // For demo purposes, we'll simulate a successful login
-                // In a real app, you would connect to your authentication API
+                console.log('Attempting login with:', { username });
+                
+                // For testing purposes, allow a test login without API
+                if (username === 'test' && password === 'test') {
+                    console.log('Using test login');
+                    
+                    // Create a mock token
+                    const mockToken = 'mock-jwt-token-for-testing';
+                    localStorage.setItem('token', mockToken);
+                    
+                    // Generate a customer number
+                    const customerNumber = generateCustomerNumber(username);
+                    
+                    // Create user info
+                    const userInfo = {
+                        username: username,
+                        name: 'Test User',
+                        email: 'test@example.com',
+                        customerNumber: customerNumber
+                    };
+                    
+                    // Store user info
+                    localStorage.setItem('userInfo', JSON.stringify(userInfo));
+                    
+                    // Redirect to index
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Connect to the actual backend API for authentication
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                console.log('Login response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Login failed");
+                }
+
+                const data = await response.json();
+                console.log('Login successful, received data:', data);
+                
+                // Store the JWT token from the backend
+                localStorage.setItem('token', data.token);
                 
                 // Generate a consistent customer number for this username
                 const customerNumber = generateCustomerNumber(username);
@@ -111,9 +165,6 @@
                 
                 // Store user data for future logins
                 localStorage.setItem('userData', JSON.stringify(userData));
-                
-                // Simulate token
-                localStorage.setItem('token', 'demo-token-' + Date.now());
                 
                 // Redirect to index page
                 window.location.href = 'index.html';
@@ -256,7 +307,7 @@
                 </div>
             </div>
             <div class="mt-6">
-                <button id="loginButton" type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-m  type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">LOG IN</button>
+                <button id="loginButton" type="button" onclick="validateLogin()" class="w-full py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">LOG IN</button>
             </div>
             <div class="mt-4 text-center">
                 <p class="text-sm">Don't have an account? <a href="signup.html" class="text-blue-400 hover:underline">Sign Up</a></p>
