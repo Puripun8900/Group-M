@@ -7,7 +7,7 @@
     <title>Smart Gym - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        
+        // Dynamic API URL based on environment
         let API_BASE_URL;
 
         if (window.location.hostname.includes('localhost')) {
@@ -40,7 +40,13 @@
                 el.classList.remove('hidden');
             });
             
-            fetchData();
+            // Use fallback data immediately to avoid 404 errors
+            useFallbackData();
+            
+            // Only try to fetch data if API_BASE_URL is not empty
+            if (API_BASE_URL) {
+                fetchData();
+            }
         };
 
         async function fetchData() {
@@ -181,8 +187,10 @@
             });
         }
 
-        // Refresh data every 30 seconds
-        setInterval(fetchData, 30000);
+        // Refresh data every 30 seconds if API_BASE_URL is not empty
+        if (API_BASE_URL) {
+            setInterval(fetchData, 30000);
+        }
         
         function logout() {
             // Keep the user info in localStorage but set as guest
