@@ -4,19 +4,58 @@ const routes = require('./routes/sensorRoutes');
 const connectMongoDB = require('./db/db');
 const authRoutes = require('./routes/authRoutes');
 const { PORT } = require('./config/config');
-
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
+
+const allowedOrigins = [
+    'http://localhost:5500',            // Local testing
+    'https://smartgym-m.azurewebsites.net'     // Hosted backend with frontend
+];
+
+/**
+ * CORS Middleware 
+ * This middleware allows cross-origin requests from specified origins.
+ * It checks the origin of the request and allows it if it's in the allowedOrigins array.
+ * credentials: true; Allow cookies or JWT tokens
+ */
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS not allowed for this origin'));
+        }
+    },
+    credentials: true 
+}));
+
+//Routes
 app.use('/sensors', routes);
 app.use('/auth', authRoutes);
 
-// serve static file
+// Serve static files from 'public'
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Fallback route to serve index.html
-app.get('*', (req, res) => {
+// Serve login page at root URL
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'login.html'));
+});
+
+// Serve signup page explicitly
+app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'signup.html'));
+});
+
+// Serve home page (index.html) after login
+app.get('/home', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+});
+
+// Catch-all fallback (optional)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public', 'login.html'));
 });
 
 //Mongodb connection
