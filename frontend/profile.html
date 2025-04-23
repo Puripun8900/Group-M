@@ -7,12 +7,13 @@
     <title>Profile - Smart Gym</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Dynamic API URL based on environment
         let API_BASE_URL;
 
         if (window.location.hostname.includes('localhost')) {
             API_BASE_URL = 'http://localhost:3030';
         } else {
-            API_BASE_URL = '';
+            API_BASE_URL = ''; 
         }
         
         function updateTime() {
