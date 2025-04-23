@@ -23,22 +23,16 @@
         let occupancyChart;
         let currentRange = '24h';
         
-        function updateTime() {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            document.getElementById('time').innerText = `${hours} : ${minutes}`;
-
-            let greeting = "GOOD MORNING";
-            if (hours >= 12 && hours < 18) greeting = "GOOD AFTERNOON";
-            else if (hours >= 18) greeting = "GOOD EVENING";
-            document.getElementById('greeting').innerText = greeting;
-
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
-        }
-        
+        // Check authentication on page load
         window.onload = function() {
+            // Check if user is authenticated
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // Redirect to login page if not authenticated
+                window.location.href = 'login.html';
+                return;
+            }
+            
             updateTime();
             setInterval(updateTime, 60000); // Update time every minute
             
@@ -54,6 +48,21 @@
                 fetchHistoricalData('24h');
             }
         };
+        
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('time').innerText = `${hours} : ${minutes}`;
+
+            let greeting = "GOOD MORNING";
+            if (hours >= 12 && hours < 18) greeting = "GOOD AFTERNOON";
+            else if (hours >= 18) greeting = "GOOD EVENING";
+            document.getElementById('greeting').innerText = greeting;
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
+        }
         
         function initCharts() {
             // Temperature Chart
@@ -466,14 +475,7 @@
         }
         
         function logout() {
-            // Keep the user info in localStorage but set as guest
-            const guestInfo = {
-                username: "Guest User",
-                name: "Guest User",
-                email: "",
-                customerNumber: "000000"
-            };
-            localStorage.setItem('userInfo', JSON.stringify(guestInfo));
+            localStorage.removeItem('userInfo');
             localStorage.removeItem('token');
             window.location.href = 'login.html';
         }
