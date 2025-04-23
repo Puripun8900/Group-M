@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Profile - Smart Gym</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script>
         // Dynamic API URL based on environment
         let API_BASE_URL;
@@ -13,7 +13,7 @@
         if (window.location.hostname.includes('localhost')) {
             API_BASE_URL = 'http://localhost:3030';
         } else {
-            API_BASE_URL = ''; 
+            API_BASE_URL = '';
         }
         
         function updateTime() {
@@ -110,16 +110,29 @@
                     localStorage.setItem('userData', JSON.stringify(userData));
                 }
                 
+                // If API_BASE_URL is available, try to update profile on server
+                if (API_BASE_URL) {
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        await fetch(`${API_BASE_URL}/user/profile`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                name: nameInput.value,
+                                email: emailInput.value
+                            })
+                        });
+                    }
+                }
+                
                 // Show success message
                 showMessage('Profile updated successfully', 'success');
-                
-                // Reset button state
-                saveButton.disabled = false;
-                saveButton.innerHTML = originalButtonText;
             } catch (error) {
-                console.error('Error updating profile:', error);
                 showMessage('Failed to update profile. Please try again.', 'error');
-                
+            } finally {
                 // Reset button state
                 saveButton.disabled = false;
                 saveButton.innerHTML = originalButtonText;
