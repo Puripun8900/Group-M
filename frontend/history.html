@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // Dynamic API URL based on environment
         let API_BASE_URL;
 
         if (window.location.hostname.includes('localhost')) {
@@ -44,8 +45,14 @@
             // Initialize charts with empty data
             initCharts();
             
-            // Fetch historical data for the default time range (24h)
-            fetchHistoricalData('24h');
+            // Use fallback data immediately to avoid 404 errors
+            useFallbackData('24h');
+            
+            // Only try to fetch data if API_BASE_URL is not empty
+            if (API_BASE_URL) {
+                // Fetch historical data for the default time range (24h)
+                fetchHistoricalData('24h');
+            }
         };
         
         function initCharts() {
