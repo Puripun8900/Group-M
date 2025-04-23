@@ -7,9 +7,14 @@
     <title>Smart Gym - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Global API URL - Use local proxy for development
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
-        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        
+        let API_BASE_URL;
+
+        if (window.location.hostname.includes('localhost')) {
+            API_BASE_URL = 'http://localhost:5000';
+        } else {
+            API_BASE_URL = '';
+        }
         
         function updateTime() {
             const now = new Date();
@@ -40,8 +45,11 @@
 
         async function fetchData() {
             try {
+                console.log('Fetching data...');
                 // Get authentication token if available
                 const token = localStorage.getItem('token');
+                console.log('Token:', token ? 'Found' : 'Not found');
+                
                 const headers = {
                     'Accept': 'application/json'
                 };
@@ -52,24 +60,32 @@
                 }
                 
                 // Fetch temperature data
+                console.log('Fetching temperature data...');
                 const tempResponse = await fetch(`${API_BASE_URL}/sensors/latest/temperature`, {
                     method: 'GET',
                     headers: headers
                 });
                 
                 // Fetch humidity data
+                console.log('Fetching humidity data...');
                 const humidityResponse = await fetch(`${API_BASE_URL}/sensors/latest/humidity`, {
                     method: 'GET',
                     headers: headers
                 });
                 
                 // Fetch people count data
+                console.log('Fetching people count data...');
                 const peopleCountResponse = await fetch(`${API_BASE_URL}/sensors/latest/peoplecount`, {
                     method: 'GET',
                     headers: headers
                 });
                 
                 if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
+                    console.error('API response not OK:', {
+                        temp: tempResponse.status,
+                        humidity: humidityResponse.status,
+                        peopleCount: peopleCountResponse.status
+                    });
                     throw new Error(`API responded with error status`);
                 }
                 
@@ -77,22 +93,29 @@
                 const humidityData = await humidityResponse.json();
                 const peopleCountData = await peopleCountResponse.json();
                 
-                // Update temperature
-                document.getElementById('tempValue').innerText = tempData.value.toFixed(1);
+                console.log('Temperature data:', tempData);
+                console.log('Humidity data:', humidityData);
+                console.log('People count data:', peopleCountData);
+                
+                // Update temperature - Handle both { temperature: value } and { value: value } formats
+                const tempValue = tempData.temperature !== undefined ? tempData.temperature : tempData.value;
+                document.getElementById('tempValue').innerText = parseFloat(tempValue).toFixed(1);
                 document.getElementById('tempUnit').innerText = '°C';
                 
-                // Update humidity
-                document.getElementById('humidityValue').innerText = `${humidityData.value.toFixed(0)}%`;
+                // Update humidity - Handle both { humidity: value } and { value: value } formats
+                const humidityValue = humidityData.humidity !== undefined ? humidityData.humidity : humidityData.value;
+                document.getElementById('humidityValue').innerText = `${parseFloat(humidityValue).toFixed(0)}%`;
                 
-                // Update occupancy
-                document.getElementById('currentOccupancy').innerText = peopleCountData.value;
+                // Update occupancy - Handle both { peopleCount: value } and { value: value } formats
+                const peopleCount = peopleCountData.peopleCount !== undefined ? peopleCountData.peopleCount : peopleCountData.value;
+                document.getElementById('currentOccupancy').innerText = peopleCount;
                 
                 // For demonstration, we'll set these values based on current occupancy
-                document.getElementById('enteredCount').innerText = peopleCountData.value + 5;
+                document.getElementById('enteredCount').innerText = parseInt(peopleCount) + 5;
                 document.getElementById('exitedCount').innerText = '5';
 
                 const maxOccupancy = 50;
-                const occupancyRatio = (peopleCountData.value / maxOccupancy) * 100;
+                const occupancyRatio = (parseInt(peopleCount) / maxOccupancy) * 100;
                 document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
                 
                 // Get user info from localStorage
@@ -131,6 +154,8 @@
         }
         
         function useFallbackData() {
+            console.log('Using fallback data');
+            // Fixed values for fallback data
             document.getElementById('tempValue').innerText = '22.5';
             document.getElementById('tempUnit').innerText = '°C';
             document.getElementById('humidityValue').innerText = '45%';
