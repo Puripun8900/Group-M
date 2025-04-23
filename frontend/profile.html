@@ -16,6 +16,23 @@
             API_BASE_URL = '';
         }
         
+        // Check authentication on page load
+        window.onload = function() {
+            // Check if user is authenticated
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // Redirect to login page if not authenticated
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            updateTime();
+            setInterval(updateTime, 60000); // Update time every minute
+            
+            // Load user data
+            loadUserData();
+        };
+        
         function updateTime() {
             const now = new Date();
             const hours = now.getHours().toString().padStart(2, '0');
@@ -31,30 +48,16 @@
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
         
-        window.onload = function() {
-            updateTime();
-            setInterval(updateTime, 60000); // Update time every minute
-            
-            // Load user data
-            loadUserData();
-        };
-        
         function loadUserData() {
             // Get user data from localStorage
-            const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
-                username: "Guest User",
-                name: "Guest User",
-                email: "",
-                customerNumber: "000000"
-            };
+            const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
             
             // Display user data
-            document.getElementById('username').innerText = userInfo.username;
-            document.getElementById('customerNumber').innerText = userInfo.customerNumber;
+            document.getElementById('username').innerText = userInfo.username || "User";
             
             // Set form field values
-            document.getElementById('nameInput').value = userInfo.name;
-            document.getElementById('emailInput').value = userInfo.email;
+            document.getElementById('nameInput').value = userInfo.name || userInfo.username || "";
+            document.getElementById('emailInput').value = userInfo.email || "";
         }
         
         async function saveProfile() {
@@ -80,12 +83,7 @@
             
             try {
                 // Get current user info
-                const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
-                    username: "Guest User",
-                    name: "Guest User",
-                    email: "",
-                    customerNumber: "000000"
-                };
+                const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
                 
                 // Update user info
                 userInfo.name = nameInput.value;
@@ -95,15 +93,14 @@
                 localStorage.setItem('userInfo', JSON.stringify(userInfo));
                 
                 // Also update in userData storage for persistence across logins
-                if (userInfo.username !== "Guest User") {
+                if (userInfo.username) {
                     // Get existing user data
                     const userData = JSON.parse(localStorage.getItem('userData')) || {};
                     
                     // Update user data
                     userData[userInfo.username] = {
                         name: nameInput.value,
-                        email: emailInput.value,
-                        customerNumber: userInfo.customerNumber
+                        email: emailInput.value
                     };
                     
                     // Save updated user data
@@ -158,14 +155,7 @@
         }
         
         function logout() {
-            // Keep the user info in localStorage but set as guest
-            const guestInfo = {
-                username: "Guest User",
-                name: "Guest User",
-                email: "",
-                customerNumber: "000000"
-            };
-            localStorage.setItem('userInfo', JSON.stringify(guestInfo));
+            localStorage.removeItem('userInfo');
             localStorage.removeItem('token');
             window.location.href = 'login.html';
         }
@@ -263,10 +253,6 @@
                     <div>
                         <p class="text-sm text-gray-400">Username (cannot be changed)</p>
                         <p class="text-xl font-bold" id="username">Loading...</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-400">Customer Number</p>
-                        <p class="text-xl font-bold" id="customerNumber">Loading...</p>
                     </div>
                 </div>
             </div>
