@@ -16,6 +16,19 @@
             API_BASE_URL = '';
         }
         
+        // Check if user is already logged in
+        window.onload = function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // Redirect to index page if already logged in
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            updateTime();
+            setInterval(updateTime, 60000); // Update time every minute
+        };
+        
         function updateTime() {
             const now = new Date();
             const hours = now.getHours().toString().padStart(2, '0'); // Ensures 2-digit format
@@ -32,40 +45,6 @@
             
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
-        }
-        setInterval(updateTime, 60000); // Update time every minute
-        window.onload = updateTime;
-        
-        function goToIndexAsGuest() {
-            // Clear any existing user data
-            localStorage.removeItem('token');
-            
-            // Set customer number to 000000 for guest users
-            const guestInfo = {
-                username: "Guest User",
-                name: "Guest User",
-                email: "",
-                customerNumber: "000000"
-            };
-            localStorage.setItem('userInfo', JSON.stringify(guestInfo));
-            
-            // Redirect to index
-            window.location.href = 'index.html';
-        }
-        
-        // Generate a consistent customer number based on username
-        function generateCustomerNumber(username) {
-            // Simple hash function to generate a number from a string
-            let hash = 0;
-            for (let i = 0; i < username.length; i++) {
-                const char = username.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // Convert to 32bit integer
-            }
-            
-            // Make sure it's positive and format as a 6-digit number
-            const positiveHash = Math.abs(hash);
-            return positiveHash.toString().padStart(6, '0').substring(0, 6);
         }
         
         async function validateLogin() {
@@ -107,9 +86,6 @@
                     // Store the JWT token from the backend
                     localStorage.setItem('token', data.token);
                     
-                    // Generate a consistent customer number for this username
-                    const customerNumber = generateCustomerNumber(username);
-                    
                     // Get stored user data if available
                     let userData = JSON.parse(localStorage.getItem('userData')) || {};
                     
@@ -117,8 +93,7 @@
                     if (!userData[username]) {
                         userData[username] = {
                             name: username,
-                            email: '',
-                            customerNumber: customerNumber
+                            email: ''
                         };
                     }
                     
@@ -126,8 +101,7 @@
                     const userInfo = {
                         username: username,
                         name: userData[username].name || username,
-                        email: userData[username].email || '',
-                        customerNumber: userData[username].customerNumber || customerNumber
+                        email: userData[username].email || ''
                     };
                     
                     // Store the user info in localStorage
@@ -140,9 +114,6 @@
                     window.location.href = 'index.html';
                 } else {
                     // If no API_BASE_URL, create a fallback login for testing
-                    // Generate a consistent customer number for this username
-                    const customerNumber = generateCustomerNumber(username);
-                    
                     // Get stored user data if available
                     let userData = JSON.parse(localStorage.getItem('userData')) || {};
                     
@@ -150,8 +121,7 @@
                     if (!userData[username]) {
                         userData[username] = {
                             name: username,
-                            email: '',
-                            customerNumber: customerNumber
+                            email: ''
                         };
                     }
                     
@@ -159,8 +129,7 @@
                     const userInfo = {
                         username: username,
                         name: userData[username].name || username,
-                        email: userData[username].email || '',
-                        customerNumber: userData[username].customerNumber || customerNumber
+                        email: userData[username].email || ''
                     };
                     
                     // Store the user info in localStorage
@@ -283,10 +252,10 @@
 
     <!-- Top Section: Logo, Greeting, Time & Date -->
     <div class="absolute top-6 left-6 flex items-center">
-        <a href="index.html" class="flex items-center">
+        <div class="flex items-center">
             <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
             <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
-        </a>
+        </div>
     </div>
     
     <div class="absolute top-6 right-6 flex space-x-6 text-xl">
