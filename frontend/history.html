@@ -8,9 +8,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Global API URL - Use local proxy for development
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
-        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        let API_BASE_URL;
+
+        if (window.location.hostname.includes('localhost')) {
+            API_BASE_URL = 'http://localhost:3030';
+        } else {
+            API_BASE_URL = '';
+        }
+        
+        // Global variables for charts
+        let temperatureChart;
+        let humidityChart;
+        let occupancyChart;
+        let currentRange = '24h';
         
         function updateTime() {
             const now = new Date();
@@ -27,40 +37,16 @@
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
         
-        // Chart objects
-        let temperatureChart;
-        let humidityChart;
-        let occupancyChart;
-        
-        // Current time range
-        let currentRange = '24h';
-        
         window.onload = function() {
             updateTime();
             setInterval(updateTime, 60000); // Update time every minute
             
-            // Load user data
-            loadUserData();
-            
-            // Initialize charts
+            // Initialize charts with empty data
             initCharts();
             
-            // Load data for default time range (24h)
+            // Fetch historical data for the default time range (24h)
             fetchHistoricalData('24h');
         };
-        
-        function loadUserData() {
-            // Get user data from localStorage
-            const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
-                username: "Guest User",
-                name: "Guest User",
-                customerNumber: "000000"
-            };
-            
-            // Display user data
-            document.getElementById('userName').innerText = userInfo.name;
-            document.getElementById('customerNumber').innerText = userInfo.customerNumber;
-        }
         
         function initCharts() {
             // Temperature Chart
@@ -72,41 +58,41 @@
                     datasets: [{
                         label: 'Temperature (°C)',
                         data: [],
-                        borderColor: '#3b82f6',
+                        borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         borderWidth: 2,
-                        pointBackgroundColor: '#3b82f6',
-                        pointRadius: 4,
-                        tension: 0.2,
-                        fill: true
+                        fill: true,
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: {
-                                color: 'white'
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: 'white'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                color: 'white'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)'
                             }
                         }
                     }
@@ -122,41 +108,41 @@
                     datasets: [{
                         label: 'Humidity (%)',
                         data: [],
-                        borderColor: '#10b981',
+                        borderColor: 'rgb(16, 185, 129)',
                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
                         borderWidth: 2,
-                        pointBackgroundColor: '#10b981',
-                        pointRadius: 4,
-                        tension: 0.2,
-                        fill: true
+                        fill: true,
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: {
-                                color: 'white'
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: 'white'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                color: 'white'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)'
                             }
                         }
                     }
@@ -166,47 +152,44 @@
             // Occupancy Chart
             const occupancyCtx = document.getElementById('occupancyChart').getContext('2d');
             occupancyChart = new Chart(occupancyCtx, {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: [],
                     datasets: [{
                         label: 'Occupancy',
                         data: [],
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#f59e0b',
-                        pointRadius: 4,
-                        tension: 0.2,
-                        fill: true
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: {
-                                color: 'white'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: 'white'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                color: 'white'
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.7)'
                             }
                         }
                     }
@@ -215,6 +198,7 @@
         }
         
         async function fetchHistoricalData(timeRange) {
+            console.log('Fetching historical data for:', timeRange);
             // Update active button
             document.querySelectorAll('.time-range-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-500');
@@ -234,6 +218,8 @@
             try {
                 // Get authentication token if available
                 const token = localStorage.getItem('token');
+                console.log('Token:', token ? 'Found' : 'Not found');
+                
                 const headers = {
                     'Accept': 'application/json'
                 };
@@ -243,17 +229,41 @@
                     headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                // Fetch all sensor data from the new endpoint
-                const response = await fetch(`${API_BASE_URL}/sensors`, {
+                // Fetch historical data for each sensor type
+                const tempResponse = await fetch(`${API_BASE_URL}/sensors/history/temperature`, {
                     method: 'GET',
                     headers: headers
                 });
                 
-                if (!response.ok) {
+                const humidityResponse = await fetch(`${API_BASE_URL}/sensors/history/humidity`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                const peopleCountResponse = await fetch(`${API_BASE_URL}/sensors/history/peoplecount`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
+                    console.error('API response not OK:', {
+                        temp: tempResponse.status,
+                        humidity: humidityResponse.status,
+                        peopleCount: peopleCountResponse.status
+                    });
                     throw new Error(`API responded with error status`);
                 }
                 
-                const allSensorData = await response.json();
+                const tempData = await tempResponse.json();
+                const humidityData = await humidityResponse.json();
+                const peopleCountData = await peopleCountResponse.json();
+                
+                // Combine all data for filtering
+                const allSensorData = [
+                    ...tempData.map(item => ({ ...item, type: 'temperature' })),
+                    ...humidityData.map(item => ({ ...item, type: 'humidity' })),
+                    ...peopleCountData.map(item => ({ ...item, type: 'peoplecount' }))
+                ];
                 
                 // Filter data based on time range
                 const filteredData = filterDataByTimeRange(allSensorData, timeRange);
@@ -280,172 +290,182 @@
         
         function filterDataByTimeRange(data, timeRange) {
             const now = new Date();
-            let startDate = new Date();
+            let startTime;
             
-            if (timeRange === '24h') {
-                startDate.setDate(startDate.getDate() - 1);
-            } else if (timeRange === '7d') {
-                startDate.setDate(startDate.getDate() - 7);
-            } else if (timeRange === '30d') {
-                startDate.setDate(startDate.getDate() - 30);
+            switch (timeRange) {
+                case '1h':
+                    startTime = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
+                    break;
+                case '6h':
+                    startTime = new Date(now.getTime() - 6 * 60 * 60 * 1000); // 6 hours ago
+                    break;
+                case '24h':
+                    startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+                    break;
+                case '7d':
+                    startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+                    break;
+                case '30d':
+                    startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+                    break;
+                default:
+                    startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to 24 hours
             }
             
-            // Filter data by date and type
-            const tempData = data.filter(item => 
-                item.type === 'temperature' && 
-                new Date(item.timestamp) >= startDate && 
-                new Date(item.timestamp) <= now
-            );
-            
-            const humidityData = data.filter(item => 
-                item.type === 'humidity' && 
-                new Date(item.timestamp) >= startDate && 
-                new Date(item.timestamp) <= now
-            );
-            
-            const peopleCountData = data.filter(item => 
-                item.type === 'peoplecount' && 
-                new Date(item.timestamp) >= startDate && 
-                new Date(item.timestamp) <= now
-            );
-            
-            return {
-                temperature: tempData,
-                humidity: humidityData,
-                peopleCount: peopleCountData
-            };
+            return data.filter(item => new Date(item.timestamp) >= startTime);
         }
         
-        function updateCharts(filteredData) {
-            // Check if we have data
-            if (!filteredData.temperature.length && !filteredData.humidity.length && !filteredData.peopleCount.length) {
-                useFallbackData(currentRange);
-                return;
-            }
+        function updateCharts(data) {
+            // Group data by type
+            const temperatureData = data.filter(item => item.type === 'temperature');
+            const humidityData = data.filter(item => item.type === 'humidity');
+            const occupancyData = data.filter(item => item.type === 'peoplecount');
             
-            // Process temperature data
-            const tempLabels = [];
-            const tempValues = [];
+            // Sort data by timestamp
+            temperatureData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            humidityData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            occupancyData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            // Sort data by timestamp (oldest to newest)
-            filteredData.temperature.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            // Format timestamps for display
+            const formatTimestamp = (timestamp, timeRange) => {
+                const date = new Date(timestamp);
+                if (timeRange === '1h' || timeRange === '6h') {
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } else if (timeRange === '24h') {
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
+                           date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            };
             
-            // Extract data for charts
-            filteredData.temperature.forEach(item => {
-                const date = new Date(item.timestamp);
-                tempLabels.push(formatDateLabel(date, currentRange));
-                tempValues.push(item.value);
+            // Update Temperature Chart
+            temperatureChart.data.labels = temperatureData.map(item => formatTimestamp(item.timestamp, currentRange));
+            temperatureChart.data.datasets[0].data = temperatureData.map(item => {
+                // Handle both { temperature: value } and { value: value } formats
+                return item.temperature !== undefined ? item.temperature : item.value;
             });
-            
-            // Process humidity data
-            const humidityLabels = [];
-            const humidityValues = [];
-            
-            // Sort data by timestamp (oldest to newest)
-            filteredData.humidity.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            
-            // Extract data for charts
-            filteredData.humidity.forEach(item => {
-                const date = new Date(item.timestamp);
-                humidityLabels.push(formatDateLabel(date, currentRange));
-                humidityValues.push(item.value);
-            });
-            
-            // Process people count data
-            const occupancyLabels = [];
-            const occupancyValues = [];
-            
-            // Sort data by timestamp (oldest to newest)
-            filteredData.peopleCount.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            
-            // Extract data for charts
-            filteredData.peopleCount.forEach(item => {
-                const date = new Date(item.timestamp);
-                occupancyLabels.push(formatDateLabel(date, currentRange));
-                occupancyValues.push(item.value);
-            });
-            
-            // Update temperature chart
-            temperatureChart.data.labels = tempLabels;
-            temperatureChart.data.datasets[0].data = tempValues;
             temperatureChart.update();
             
-            // Update humidity chart
-            humidityChart.data.labels = humidityLabels;
-            humidityChart.data.datasets[0].data = humidityValues;
+            // Update Humidity Chart
+            humidityChart.data.labels = humidityData.map(item => formatTimestamp(item.timestamp, currentRange));
+            humidityChart.data.datasets[0].data = humidityData.map(item => {
+                // Handle both { humidity: value } and { value: value } formats
+                return item.humidity !== undefined ? item.humidity : item.value;
+            });
             humidityChart.update();
             
-            // Update occupancy chart
-            occupancyChart.data.labels = occupancyLabels;
-            occupancyChart.data.datasets[0].data = occupancyValues;
+            // Update Occupancy Chart
+            occupancyChart.data.labels = occupancyData.map(item => formatTimestamp(item.timestamp, currentRange));
+            occupancyChart.data.datasets[0].data = occupancyData.map(item => {
+                // Handle both { peopleCount: value } and { value: value } formats
+                return item.peopleCount !== undefined ? item.peopleCount : item.value;
+            });
             occupancyChart.update();
         }
         
-        function formatDateLabel(date, timeRange) {
-            if (timeRange === '24h') {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else if (timeRange === '7d') {
-                return date.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' });
-            } else {
-                return date.toLocaleDateString([], { month: 'numeric', day: 'numeric' });
-            }
-        }
-        
         function useFallbackData(timeRange) {
-            // Generate fallback data based on time range
-            const labels = [];
-            const temperatures = [];
-            const humidities = [];
-            const occupancies = [];
+            console.log('Using fallback data for:', timeRange);
             
+            // Generate timestamps based on time range
             const now = new Date();
-            let dataPoints = 0;
+            const timestamps = [];
+            const temperatureValues = [];
+            const humidityValues = [];
+            const occupancyValues = [];
             
-            if (timeRange === '24h') {
-                dataPoints = 24;
-                for (let i = 0; i < dataPoints; i++) {
-                    const date = new Date(now);
-                    date.setHours(date.getHours() - (dataPoints - i));
-                    labels.push(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-                    temperatures.push(20 + Math.random() * 5);
-                    humidities.push(40 + Math.random() * 20);
-                    occupancies.push(Math.floor(Math.random() * 30));
-                }
-            } else if (timeRange === '7d') {
-                dataPoints = 7;
-                for (let i = 0; i < dataPoints; i++) {
-                    const date = new Date(now);
-                    date.setDate(date.getDate() - (dataPoints - i - 1));
-                    labels.push(date.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' }));
-                    temperatures.push(20 + Math.random() * 5);
-                    humidities.push(40 + Math.random() * 20);
-                    occupancies.push(Math.floor(Math.random() * 30));
-                }
-            } else {
-                dataPoints = 30;
-                for (let i = 0; i < dataPoints; i++) {
-                    const date = new Date(now);
-                    date.setDate(date.getDate() - (dataPoints - i - 1));
-                    labels.push(date.toLocaleDateString([], { month: 'numeric', day: 'numeric' }));
-                    temperatures.push(20 + Math.random() * 5);
-                    humidities.push(40 + Math.random() * 20);
-                    occupancies.push(Math.floor(Math.random() * 30));
-                }
+            let interval;
+            let count;
+            
+            switch (timeRange) {
+                case '1h':
+                    interval = 5 * 60 * 1000; // 5 minutes
+                    count = 12;
+                    break;
+                case '6h':
+                    interval = 30 * 60 * 1000; // 30 minutes
+                    count = 12;
+                    break;
+                case '24h':
+                    interval = 2 * 60 * 60 * 1000; // 2 hours
+                    count = 12;
+                    break;
+                case '7d':
+                    interval = 12 * 60 * 60 * 1000; // 12 hours
+                    count = 14;
+                    break;
+                case '30d':
+                    interval = 24 * 60 * 60 * 1000; // 1 day
+                    count = 30;
+                    break;
+                default:
+                    interval = 2 * 60 * 60 * 1000; // 2 hours
+                    count = 12;
             }
             
-            // Update temperature chart
-            temperatureChart.data.labels = labels;
-            temperatureChart.data.datasets[0].data = temperatures;
+            // Generate fixed fallback data
+            for (let i = count - 1; i >= 0; i--) {
+                const timestamp = new Date(now.getTime() - i * interval);
+                timestamps.push(timestamp);
+                
+                // Fixed values with small variations
+                const hourOfDay = timestamp.getHours();
+                
+                // Temperature varies by time of day (cooler at night, warmer during day)
+                let baseTemp = 22;
+                if (hourOfDay >= 10 && hourOfDay <= 16) {
+                    baseTemp = 24; // Warmer during midday
+                } else if (hourOfDay >= 0 && hourOfDay <= 5) {
+                    baseTemp = 20; // Cooler at night
+                }
+                temperatureValues.push(baseTemp);
+                
+                // Humidity varies inversely with temperature
+                let baseHumidity = 45;
+                if (hourOfDay >= 10 && hourOfDay <= 16) {
+                    baseHumidity = 40; // Drier during midday
+                } else if (hourOfDay >= 0 && hourOfDay <= 5) {
+                    baseHumidity = 50; // More humid at night
+                }
+                humidityValues.push(baseHumidity);
+                
+                // Occupancy varies by time of day (busier during morning and evening)
+                let baseOccupancy = 15;
+                if (hourOfDay >= 6 && hourOfDay <= 9) {
+                    baseOccupancy = 25; // Morning rush
+                } else if (hourOfDay >= 17 && hourOfDay <= 20) {
+                    baseOccupancy = 30; // Evening rush
+                } else if (hourOfDay >= 0 && hourOfDay <= 5) {
+                    baseOccupancy = 5; // Very few people at night
+                }
+                occupancyValues.push(baseOccupancy);
+            }
+            
+            // Format timestamps for display
+            const formatTimestamp = (timestamp, timeRange) => {
+                if (timeRange === '1h' || timeRange === '6h') {
+                    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } else if (timeRange === '24h') {
+                    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
+                           timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            };
+            
+            // Update Temperature Chart
+            temperatureChart.data.labels = timestamps.map(timestamp => formatTimestamp(timestamp, timeRange));
+            temperatureChart.data.datasets[0].data = temperatureValues;
             temperatureChart.update();
             
-            // Update humidity chart
-            humidityChart.data.labels = labels;
-            humidityChart.data.datasets[0].data = humidities;
+            // Update Humidity Chart
+            humidityChart.data.labels = timestamps.map(timestamp => formatTimestamp(timestamp, timeRange));
+            humidityChart.data.datasets[0].data = humidityValues;
             humidityChart.update();
             
-            // Update occupancy chart
-            occupancyChart.data.labels = labels;
-            occupancyChart.data.datasets[0].data = occupancies;
+            // Update Occupancy Chart
+            occupancyChart.data.labels = timestamps.map(timestamp => formatTimestamp(timestamp, timeRange));
+            occupancyChart.data.datasets[0].data = occupancyValues;
             occupancyChart.update();
         }
         
@@ -552,69 +572,54 @@
     
     <!-- Main Content -->
     <div class="w-full max-w-6xl mx-auto mt-32 mb-16 px-4">
-        <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                <h2 class="text-2xl text-blue-400 font-bold">HISTORICAL DATA</h2>
-                
-                <!-- User Info -->
-                <div class="flex flex-col items-end mt-4 md:mt-0">
-                    <p class="text-xl" id="userName">Loading...</p>
-                    <p class="text-sm">CUSTOMER NUMBER: <span id="customerNumber">Loading...</span></p>
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl text-blue-400 font-bold">HISTORICAL DATA</h2>
+            
+            <!-- Time Range Buttons -->
+            <div class="flex space-x-2">
+                <button id="1hBtn" class="time-range-btn px-3 py-1 bg-gray-700 rounded-md hover:bg-blue-500 transition-colors" onclick="fetchHistoricalData('1h')">1h</button>
+                <button id="6hBtn" class="time-range-btn px-3 py-1 bg-gray-700 rounded-md hover:bg-blue-500 transition-colors" onclick="fetchHistoricalData('6h')">6h</button>
+                <button id="24hBtn" class="time-range-btn px-3 py-1 bg-blue-500 rounded-md hover:bg-blue-500 transition-colors" onclick="fetchHistoricalData('24h')">24h</button>
+                <button id="7dBtn" class="time-range-btn px-3 py-1 bg-gray-700 rounded-md hover:bg-blue-500 transition-colors" onclick="fetchHistoricalData('7d')">7d</button>
+                <button id="30dBtn" class="time-range-btn px-3 py-1 bg-gray-700 rounded-md hover:bg-blue-500 transition-colors" onclick="fetchHistoricalData('30d')">30d</button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Temperature Chart -->
+            <div class="bg-gray-900 bg-opacity-75 p-6 rounded-lg">
+                <h3 class="text-blue-400 text-xl mb-4">TEMPERATURE</h3>
+                <div class="chart-container">
+                    <canvas id="temperatureChart"></canvas>
                 </div>
             </div>
             
-            <!-- Time Range Selector -->
-            <div class="flex justify-center mb-8">
-                <div class="inline-flex rounded-md shadow-sm" role="group">
-                    <button id="24hBtn" type="button" class="px-4 py-2 text-sm font-medium bg-blue-500 text-white rounded-l-lg time-range-btn" onclick="fetchHistoricalData('24h')">
-                        24 Hours
-                    </button>
-                    <button id="7dBtn" type="button" class="px-4 py-2 text-sm font-medium bg-gray-700 text-white time-range-btn" onclick="fetchHistoricalData('7d')">
-                        7 Days
-                    </button>
-                    <button id="30dBtn" type="button" class="px-4 py-2 text-sm font-medium bg-gray-700 text-white rounded-r-lg time-range-btn" onclick="fetchHistoricalData('30d')">
-                        30 Days
-                    </button>
+            <!-- Humidity Chart -->
+            <div class="bg-gray-900 bg-opacity-75 p-6 rounded-lg">
+                <h3 class="text-blue-400 text-xl mb-4">HUMIDITY</h3>
+                <div class="chart-container">
+                    <canvas id="humidityChart"></canvas>
                 </div>
             </div>
             
-            <!-- Charts -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Temperature Chart -->
-                <div class="bg-gray-800 p-4 rounded-lg">
-                    <h3 class="text-xl text-blue-400 mb-4">Temperature</h3>
-                    <div class="chart-container">
-                        <canvas id="temperatureChart"></canvas>
-                    </div>
-                </div>
-                
-                <!-- Humidity Chart -->
-                <div class="bg-gray-800 p-4 rounded-lg">
-                    <h3 class="text-xl text-blue-400 mb-4">Humidity</h3>
-                    <div class="chart-container">
-                        <canvas id="humidityChart"></canvas>
-                    </div>
-                </div>
-                
-                <!-- Occupancy Chart -->
-                <div class="bg-gray-800 p-4 rounded-lg md:col-span-2">
-                    <h3 class="text-xl text-blue-400 mb-4">Occupancy</h3>
-                    <div class="chart-container">
-                        <canvas id="occupancyChart"></canvas>
-                    </div>
+            <!-- Occupancy Chart -->
+            <div class="bg-gray-900 bg-opacity-75 p-6 rounded-lg md:col-span-2">
+                <h3 class="text-blue-400 text-xl mb-4">OCCUPANCY</h3>
+                <div class="chart-container">
+                    <canvas id="occupancyChart"></canvas>
                 </div>
             </div>
+        </div>
+        
+        <!-- Back to Dashboard Button -->
+        <div class="mt-6 text-center">
+            <button type="button" onclick="window.location.href='index.html'" class="px-6 py-3 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors">
+                BACK TO DASHBOARD
+            </button>
             
-            <!-- Navigation Buttons -->
-            <div class="flex justify-between mt-8">
-                <button type="button" onclick="window.location.href='index.html'" class="px-6 py-3 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors">
-                    BACK TO DASHBOARD
-                </button>
-                
-                <button type="button" onclick="logout()" class="px-6 py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">
-                    LOG OUT
-                </button>
-            </div>
+            <button type="button" onclick="logout()" class="ml-4 text-blue-400 hover:underline">
+                <span class="mr-2">&#x2192;</span> LOG OUT
+            </button>
         </div>
     </div>
     
