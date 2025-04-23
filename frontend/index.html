@@ -5,11 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Smart Gym - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script>
-        // Global API URL - Use local proxy for development
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
-        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        // Dynamic API URL based on environment
+        let API_BASE_URL;
+
+        if (window.location.hostname.includes('localhost')) {
+            API_BASE_URL = 'http://localhost:3030';
+        } else {
+            API_BASE_URL = '';
+        }
+        
+        // Check authentication on page load
+        window.onload = function() {
+            // Check if user is authenticated
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // Redirect to login page if not authenticated
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            updateTime();
+            setInterval(updateTime, 60000); // Update time every minute
+            
+            // Show loading overlays
+            document.querySelectorAll('.loading-overlay').forEach(el => {
+                el.classList.remove('hidden');
+            });
+            
+            // Use fallback data immediately to avoid 404 errors
+            useFallbackData();
+            
+            // Only try to fetch data if API_BASE_URL is not empty
+            if (API_BASE_URL) {
+                fetchData();
+            }
+        };
         
         function updateTime() {
             const now = new Date();
@@ -25,23 +57,12 @@
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
-        
-        window.onload = function () {
-            updateTime();
-            setInterval(updateTime, 60000); // Update time every minute
-            
-            // Show loading overlays
-            document.querySelectorAll('.loading-overlay').forEach(el => {
-                el.classList.remove('hidden');
-            });
-            
-            fetchData();
-        };
 
         async function fetchData() {
             try {
                 // Get authentication token if available
                 const token = localStorage.getItem('token');
+                
                 const headers = {
                     'Accept': 'application/json'
                 };
@@ -77,34 +98,32 @@
                 const humidityData = await humidityResponse.json();
                 const peopleCountData = await peopleCountResponse.json();
                 
-                // Update temperature
-                document.getElementById('tempValue').innerText = tempData.value.toFixed(1);
+                // Update temperature - Handle both { temperature: value } and { value: value } formats
+                const tempValue = tempData.temperature !== undefined ? tempData.temperature : tempData.value;
+                document.getElementById('tempValue').innerText = parseFloat(tempValue).toFixed(1);
                 document.getElementById('tempUnit').innerText = '°C';
                 
-                // Update humidity
-                document.getElementById('humidityValue').innerText = `${humidityData.value.toFixed(0)}%`;
+                // Update humidity - Handle both { humidity: value } and { value: value } formats
+                const humidityValue = humidityData.humidity !== undefined ? humidityData.humidity : humidityData.value;
+                document.getElementById('humidityValue').innerText = `${parseFloat(humidityValue).toFixed(0)}%`;
                 
-                // Update occupancy
-                document.getElementById('currentOccupancy').innerText = peopleCountData.value;
+                // Update occupancy - Handle both { peopleCount: value } and { value: value } formats
+                const peopleCount = peopleCountData.peopleCount !== undefined ? peopleCountData.peopleCount : peopleCountData.value;
+                document.getElementById('currentOccupancy').innerText = peopleCount;
                 
                 // For demonstration, we'll set these values based on current occupancy
-                document.getElementById('enteredCount').innerText = peopleCountData.value + 5;
+                document.getElementById('enteredCount').innerText = parseInt(peopleCount) + 5;
                 document.getElementById('exitedCount').innerText = '5';
 
                 const maxOccupancy = 50;
-                const occupancyRatio = (peopleCountData.value / maxOccupancy) * 100;
+                const occupancyRatio = (parseInt(peopleCount) / maxOccupancy) * 100;
                 document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
                 
                 // Get user info from localStorage
-                let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
-                    username: "Guest User",
-                    name: "Guest User",
-                    customerNumber: "000000"
-                };
+                let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
                 
                 // Display user info - use name for display
-                document.getElementById('userName').innerText = userInfo.name;
-                document.getElementById('customerNumber').innerText = userInfo.customerNumber;
+                document.getElementById('userName').innerText = userInfo.name || userInfo.username || "User";
                 
                 // Hide loading overlays
                 document.querySelectorAll('.loading-overlay').forEach(el => {
@@ -118,7 +137,6 @@
                     connectionStatus.className = 'text-green-400 text-xl';
                 }
             } catch (error) {
-                console.error('Error fetching data:', error);
                 useFallbackData();
                 
                 // Update connection status if it exists
@@ -131,6 +149,7 @@
         }
         
         function useFallbackData() {
+            // Fixed values for fallback data
             document.getElementById('tempValue').innerText = '22.5';
             document.getElementById('tempUnit').innerText = '°C';
             document.getElementById('humidityValue').innerText = '45%';
@@ -140,15 +159,10 @@
             document.getElementById('occupancyBar').style.width = '30%';
             
             // Get user info from localStorage
-            let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {
-                username: "Guest User",
-                name: "Guest User",
-                customerNumber: "000000"
-            };
+            let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
             
             // Display user info
-            document.getElementById('userName').innerText = userInfo.name;
-            document.getElementById('customerNumber').innerText = userInfo.customerNumber;
+            document.getElementById('userName').innerText = userInfo.name || userInfo.username || "User";
             
             // Hide loading overlays
             document.querySelectorAll('.loading-overlay').forEach(el => {
@@ -156,18 +170,13 @@
             });
         }
 
-        // Refresh data every 30 seconds
-        setInterval(fetchData, 30000);
+        // Refresh data every 30 seconds if API_BASE_URL is not empty
+        if (API_BASE_URL) {
+            setInterval(fetchData, 30000);
+        }
         
         function logout() {
-            // Keep the user info in localStorage but set as guest
-            const guestInfo = {
-                username: "Guest User",
-                name: "Guest User",
-                email: "",
-                customerNumber: "000000"
-            };
-            localStorage.setItem('userInfo', JSON.stringify(guestInfo));
+            localStorage.removeItem('userInfo');
             localStorage.removeItem('token');
             window.location.href = 'login.html';
         }
@@ -294,9 +303,6 @@
             <div class="space-y-4">
                 <a href="profile.html" class="text-blue-400 font-bold hover:underline cursor-pointer">MY PROFILE</a>
                 <p class="text-xl" id="userName">Loading...</p>
-                <p class="text-sm">CUSTOMER NUMBER: 
-                    <span id="customerNumber">Loading...</span>
-                </p>
                 <button type="button" onclick="logout()" class="mt-4 text-blue-400 flex items-center hover:underline">
                     <span class="mr-2">&#x2192;</span> LOG OUT
                 </button>
