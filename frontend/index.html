@@ -10,10 +10,13 @@
         // Dynamic API URL based on environment
         let API_BASE_URL;
 
-        if (window.location.hostname.includes('localhost')) {
-            API_BASE_URL = 'http://localhost:3030';
+        // Set the correct API URL based on environment
+        if (window.location.hostname.includes('localhost') || 
+            window.location.hostname === '127.0.0.1' || 
+            window.location.hostname.includes('172.25.176.1')) {
+            API_BASE_URL = 'http://localhost:3030'; // Updated to port 3030
         } else {
-            API_BASE_URL = '';
+            API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
         }
         
         // Check authentication on page load
@@ -34,13 +37,8 @@
                 el.classList.remove('hidden');
             });
             
-            // Use fallback data immediately to avoid 404 errors
-            useFallbackData();
-            
-            // Only try to fetch data if API_BASE_URL is not empty
-            if (API_BASE_URL) {
-                fetchData();
-            }
+            // Fetch data from API
+            fetchData();
         };
         
         function updateTime() {
@@ -60,17 +58,17 @@
 
         async function fetchData() {
             try {
-                // Get authentication token if available
+                // Get authentication token
                 const token = localStorage.getItem('token');
                 
-                const headers = {
-                    'Accept': 'application/json'
-                };
-                
-                // Add authorization header if token exists
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
+                if (!token) {
+                    throw new Error('No authentication token found');
                 }
+                
+                const headers = {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                };
                 
                 // Fetch temperature data
                 const tempResponse = await fetch(`${API_BASE_URL}/sensors/latest/temperature`, {
@@ -78,11 +76,27 @@
                     headers: headers
                 });
                 
+                // Check if token is expired (status 403)
+                if (tempResponse.status === 403 || tempResponse.status === 401) {
+                    // Token expired or invalid, redirect to login
+                    localStorage.removeItem('token');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                if (!tempResponse.ok) {
+                    throw new Error(`API responded with error status: ${tempResponse.status}`);
+                }
+                
                 // Fetch humidity data
                 const humidityResponse = await fetch(`${API_BASE_URL}/sensors/latest/humidity`, {
                     method: 'GET',
                     headers: headers
                 });
+                
+                if (!humidityResponse.ok) {
+                    throw new Error(`API responded with error status: ${humidityResponse.status}`);
+                }
                 
                 // Fetch people count data
                 const peopleCountResponse = await fetch(`${API_BASE_URL}/sensors/latest/peoplecount`, {
@@ -90,40 +104,37 @@
                     headers: headers
                 });
                 
-                if (!tempResponse.ok || !humidityResponse.ok || !peopleCountResponse.ok) {
-                    throw new Error(`API responded with error status`);
+                if (!peopleCountResponse.ok) {
+                    throw new Error(`API responded with error status: ${peopleCountResponse.status}`);
                 }
                 
                 const tempData = await tempResponse.json();
                 const humidityData = await humidityResponse.json();
                 const peopleCountData = await peopleCountResponse.json();
                 
-                // Update temperature - Handle both { temperature: value } and { value: value } formats
-                const tempValue = tempData.temperature !== undefined ? tempData.temperature : tempData.value;
-                document.getElementById('tempValue').innerText = parseFloat(tempValue).toFixed(1);
+                // Update temperature - API returns { temperature: value }
+                document.getElementById('tempValue').innerText = parseFloat(tempData.temperature).toFixed(1);
                 document.getElementById('tempUnit').innerText = '°C';
                 
-                // Update humidity - Handle both { humidity: value } and { value: value } formats
-                const humidityValue = humidityData.humidity !== undefined ? humidityData.humidity : humidityData.value;
-                document.getElementById('humidityValue').innerText = `${parseFloat(humidityValue).toFixed(0)}%`;
+                // Update humidity - API returns { humidity: value }
+                document.getElementById('humidityValue').innerText = `${parseFloat(humidityData.humidity).toFixed(0)}%`;
                 
-                // Update occupancy - Handle both { peopleCount: value } and { value: value } formats
-                const peopleCount = peopleCountData.peopleCount !== undefined ? peopleCountData.peopleCount : peopleCountData.value;
-                document.getElementById('currentOccupancy').innerText = peopleCount;
+                // Update occupancy - API returns { peopleCount: value }
+                document.getElementById('currentOccupancy').innerText = peopleCountData.peopleCount;
                 
                 // For demonstration, we'll set these values based on current occupancy
-                document.getElementById('enteredCount').innerText = parseInt(peopleCount) + 5;
+                document.getElementById('enteredCount').innerText = parseInt(peopleCountData.peopleCount) + 5;
                 document.getElementById('exitedCount').innerText = '5';
 
                 const maxOccupancy = 50;
-                const occupancyRatio = (parseInt(peopleCount) / maxOccupancy) * 100;
+                const occupancyRatio = (parseInt(peopleCountData.peopleCount) / maxOccupancy) * 100;
                 document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
                 
                 // Get user info from localStorage
                 let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
                 
                 // Display user info - use name for display
-                document.getElementById('userName').innerText = userInfo.name || userInfo.username || "User";
+                document.getElementById('userName').innerText = userInfo.username || "User";
                 
                 // Hide loading overlays
                 document.querySelectorAll('.loading-overlay').forEach(el => {
@@ -137,6 +148,7 @@
                     connectionStatus.className = 'text-green-400 text-xl';
                 }
             } catch (error) {
+                console.error('Error fetching data:', error);
                 useFallbackData();
                 
                 // Update connection status if it exists
@@ -162,7 +174,7 @@
             let userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
             
             // Display user info
-            document.getElementById('userName').innerText = userInfo.name || userInfo.username || "User";
+            document.getElementById('userName').innerText = userInfo.username || "User";
             
             // Hide loading overlays
             document.querySelectorAll('.loading-overlay').forEach(el => {
@@ -170,10 +182,8 @@
             });
         }
 
-        // Refresh data every 30 seconds if API_BASE_URL is not empty
-        if (API_BASE_URL) {
-            setInterval(fetchData, 30000);
-        }
+        // Refresh data every 30 seconds
+        setInterval(fetchData, 30000);
         
         function logout() {
             localStorage.removeItem('userInfo');
