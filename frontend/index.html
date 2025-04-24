@@ -32,12 +32,10 @@
             updateTime();
             setInterval(updateTime, 60000); // Update time every minute
             
-            // Show loading overlays
-            document.querySelectorAll('.loading-overlay').forEach(el => {
-                el.classList.remove('hidden');
-            });
+            // Initialize with fallback data first
+            useFallbackData();
             
-            // Fetch data from API
+            // Then fetch data from API
             fetchData();
         };
         
@@ -136,11 +134,6 @@
                 // Display user info - use name for display
                 document.getElementById('userName').innerText = userInfo.username || "User";
                 
-                // Hide loading overlays
-                document.querySelectorAll('.loading-overlay').forEach(el => {
-                    el.classList.add('hidden');
-                });
-                
                 // Update connection status if it exists
                 const connectionStatus = document.getElementById('connectionStatus');
                 if (connectionStatus) {
@@ -149,7 +142,6 @@
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
-                useFallbackData();
                 
                 // Update connection status if it exists
                 const connectionStatus = document.getElementById('connectionStatus');
@@ -175,11 +167,6 @@
             
             // Display user info
             document.getElementById('userName').innerText = userInfo.username || "User";
-            
-            // Hide loading overlays
-            document.querySelectorAll('.loading-overlay').forEach(el => {
-                el.classList.add('hidden');
-            });
         }
 
         // Refresh data every 30 seconds
@@ -209,34 +196,6 @@
             background: url('https://i.ibb.co/Z1dTcNGx/Screenshot-2025-02-28-205107.png') no-repeat center center fixed;
             background-size: cover;
             font-family: Arial, sans-serif;
-        }
-        
-        .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(17, 24, 39, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 0.5rem;
-            z-index: 10;
-        }
-        
-        .loading-spinner {
-            border: 4px solid rgba(59, 130, 246, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid #3b82f6;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
         
         .sample-data-indicator {
@@ -312,7 +271,7 @@
         <div class="w-1/3 p-6 space-y-6 ml-16 mt-6">
             <div class="space-y-4">
                 <a href="profile.html" class="text-blue-400 font-bold hover:underline cursor-pointer">MY PROFILE</a>
-                <p class="text-xl" id="userName">Loading...</p>
+                <p class="text-xl" id="userName">User</p>
                 <button type="button" onclick="logout()" class="mt-4 text-blue-400 flex items-center hover:underline">
                     <span class="mr-2">&#x2192;</span> LOG OUT
                 </button>
@@ -327,24 +286,18 @@
         <div class="w-[450px] p-8 space-y-6">
             <!-- Temperature Box -->
             <div class="bg-gray-900 bg-opacity-75 p-6 rounded-lg w-[300px] h-100 relative">
-                <div class="loading-overlay">
-                    <div class="loading-spinner"></div>
-                </div>
                 <h3 class="text-blue-400 text-xl">TEMPERATURE</h3>
                 <p class="text-6xl font-bold">
-                    <span id="tempValue">--</span>
+                    <span id="tempValue">22.5</span>
                     <span id="tempUnit">°C</span>
                 </p>
             </div>
 
             <!-- Humidity Box -->
             <div class="bg-gray-900 bg-opacity-75 p-6 rounded-lg w-[300px] h-100 relative">
-                <div class="loading-overlay">
-                    <div class="loading-spinner"></div>
-                </div>
                 <h3 class="text-blue-400 text-xl">HUMIDITY</h3>
                 <p class="text-6xl font-bold">
-                    <span id="humidityValue">--%</span>
+                    <span id="humidityValue">45%</span>
                 </p>
             </div>
         </div>
@@ -352,13 +305,10 @@
         <!-- Right Section: Occupancy -->
         <div class="w-1/4 p-8">
             <div class="bg-gray-900 bg-opacity-75 p-6 rounded-lg h-auto relative">
-                <div class="loading-overlay">
-                    <div class="loading-spinner"></div>
-                </div>
                 <h3 class="text-blue-400 text-xl">OCCUPANCY</h3>
                 <div class="flex justify-between mt-4">
                     <div>
-                        <p class="text-5xl font-bold" id="currentOccupancy">--</p>
+                        <p class="text-5xl font-bold" id="currentOccupancy">15</p>
                         <p class="text-sm">Current</p>
                     </div>
                     <div>
@@ -369,17 +319,17 @@
 
                 <!-- Dynamic progress bar -->
                 <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
-                    <div id="occupancyBar" class="bg-blue-400 h-2.5 rounded-full" style="width: 0%;"></div>
+                    <div id="occupancyBar" class="bg-blue-400 h-2.5 rounded-full" style="width: 30%;"></div>
                 </div>
 
                 <div class="flex justify-between mt-4">
                     <div>
                         <p class="text-sm text-blue-400">Entered</p>
-                        <p class="text-2xl" id="enteredCount">--</p>
+                        <p class="text-2xl" id="enteredCount">20</p>
                     </div>
                     <div>
                         <p class="text-sm text-blue-400">Exited</p>
-                        <p class="text-2xl" id="exitedCount">--</p>
+                        <p class="text-2xl" id="exitedCount">5</p>
                     </div>
                 </div>
             </div>

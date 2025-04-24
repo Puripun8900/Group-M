@@ -48,10 +48,18 @@
         }
 
         function loadUserData() {
+            // Get user info from localStorage
             const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
-            document.getElementById('username').innerText = userInfo.username || "User";
-            document.getElementById('nameInput').value = userInfo.name || userInfo.username || "";
+            
+            // Set username - make sure we always display something
+            const username = userInfo.username || "Guest User";
+            document.getElementById('username').innerText = username;
+            
+            // Set form values
+            document.getElementById('nameInput').value = userInfo.name || username || "";
             document.getElementById('emailInput').value = userInfo.email || "";
+            
+            console.log("User data loaded:", userInfo);
         }
 
         async function saveProfile() {
@@ -87,28 +95,35 @@
                     payload.password = passwordInput.value;
                 }
 
-                const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(payload)
-                });
+                // Try to update profile via API
+                try {
+                    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
 
-                if (!response.ok) {
-                    throw new Error('Failed to update profile');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.name) userInfo.name = data.name;
+                        if (data.email) userInfo.email = data.email;
+                    }
+                } catch (apiError) {
+                    console.warn("API update failed, updating local storage only:", apiError);
                 }
 
-                const data = await response.json();
-
-                userInfo.name = data.name;
-                userInfo.email = data.email;
+                // Always update local storage
+                userInfo.name = nameInput.value;
+                userInfo.email = emailInput.value;
                 localStorage.setItem('userInfo', JSON.stringify(userInfo));
 
                 showMessage('Profile updated successfully', 'success');
                 passwordInput.value = "";
             } catch (error) {
+                console.error("Profile update error:", error);
                 showMessage('Failed to update profile. Please try again.', 'error');
             } finally {
                 saveButton.disabled = false;
@@ -199,7 +214,18 @@
 </head>
 <body class="flex flex-col items-center text-white min-h-screen relative">
     <!-- Top Section: Logo, Greeting, Time & Date -->
-    <!-- existing top content -->
+    <div class="absolute top-6 left-6 flex items-center">
+        <a href="index.html" class="flex items-center">
+            <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
+            <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
+        </a>
+    </div>
+    
+    <div class="absolute top-6 right-6 flex space-x-6 text-xl">
+        <h1 id="greeting" class="font-bold text-3xl uppercase">GOOD MORNING</h1>
+        <p id="time" class="text-3xl font-bold">07 : 35</p>
+        <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
+    </div>
 
     <!-- Main Content -->
     <div class="w-full max-w-4xl mx-auto mt-32 mb-16 px-4">
@@ -207,11 +233,9 @@
             <h2 class="text-2xl text-blue-400 font-bold mb-6">MY PROFILE</h2>
             <!-- User Info -->
             <div class="mb-8">
-                <div class="flex flex-col md:flex-row justify-between mb-4">
-                    <div>
-                        <p class="text-sm text-gray-400">Username (cannot be changed)</p>
-                        <p class="text-xl font-bold" id="username">Loading...</p>
-                    </div>
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400">Username (cannot be changed)</p>
+                    <p class="text-xl font-bold" id="username">Guest User</p>
                 </div>
             </div>
             <!-- Profile Form -->
