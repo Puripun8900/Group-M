@@ -16,26 +16,22 @@
             window.location.hostname.includes('172.25.176.1')) {
             API_BASE_URL = 'http://localhost:3030'; // Updated to port 3030
         } else {
-            API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
+            API_BASE_URL = window.location.origin; // Use the current origin for production
         }
-        
+
         // Check authentication on page load
         window.onload = function() {
-            // Check if user is authenticated
             const token = localStorage.getItem('token');
             if (!token) {
-                // Redirect to login page if not authenticated
                 window.location.href = 'login.html';
                 return;
             }
-            
+
             updateTime();
-            setInterval(updateTime, 60000); // Update time every minute
-            
-            // Load user data
+            setInterval(updateTime, 60000);
             loadUserData();
         };
-        
+
         function updateTime() {
             const now = new Date();
             const hours = now.getHours().toString().padStart(2, '0');
@@ -50,87 +46,96 @@
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
-        
+
         function loadUserData() {
-            // Get user data from localStorage
             const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
-            
-            // Display user data
             document.getElementById('username').innerText = userInfo.username || "User";
-            
-            // Set form field values
             document.getElementById('nameInput').value = userInfo.name || userInfo.username || "";
             document.getElementById('emailInput').value = userInfo.email || "";
         }
-        
+
         async function saveProfile() {
             const nameInput = document.getElementById('nameInput');
             const emailInput = document.getElementById('emailInput');
-            
-            // Validate inputs
+            const passwordInput = document.getElementById('passwordInput');
+
             if (!nameInput.value.trim()) {
                 showMessage('Name cannot be empty', 'error');
                 return;
             }
-            
+
             if (!emailInput.value.trim() || !/\S+@\S+\.\S+/.test(emailInput.value)) {
                 showMessage('Please enter a valid email address', 'error');
                 return;
             }
-            
-            // Show loading state
+
             const saveButton = document.getElementById('saveButton');
             const originalButtonText = saveButton.innerHTML;
             saveButton.disabled = true;
             saveButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Saving...';
-            
+
             try {
-                // Get current user info
+                const token = localStorage.getItem('token');
                 const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
-                
-                // Update user info
-                userInfo.name = nameInput.value;
-                userInfo.email = emailInput.value;
-                
-                // Save updated user info
+
+                const payload = {
+                    name: nameInput.value,
+                    email: emailInput.value
+                };
+
+                if (passwordInput.value.trim()) {
+                    payload.password = passwordInput.value;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update profile');
+                }
+
+                const data = await response.json();
+
+                userInfo.name = data.name;
+                userInfo.email = data.email;
                 localStorage.setItem('userInfo', JSON.stringify(userInfo));
-                
-                // Show success message
+
                 showMessage('Profile updated successfully', 'success');
+                passwordInput.value = "";
             } catch (error) {
                 showMessage('Failed to update profile. Please try again.', 'error');
             } finally {
-                // Reset button state
                 saveButton.disabled = false;
                 saveButton.innerHTML = originalButtonText;
             }
         }
-        
+
         function showMessage(message, type) {
             const messageElement = document.getElementById('message');
             messageElement.textContent = message;
-            
             if (type === 'error') {
                 messageElement.className = 'mt-4 p-2 bg-red-500 text-white rounded-md text-center';
             } else {
                 messageElement.className = 'mt-4 p-2 bg-green-500 text-white rounded-md text-center';
             }
-            
             messageElement.classList.remove('hidden');
-            
-            // Hide the message after 5 seconds
             setTimeout(() => {
                 messageElement.classList.add('hidden');
             }, 5000);
         }
-        
+
         function logout() {
             localStorage.removeItem('userInfo');
             localStorage.removeItem('token');
             window.location.href = 'login.html';
         }
-        
-        // Chatbot functions
+
         function toggleChatbot() {
             const chatbotContainer = document.getElementById('chatbot-container');
             if (chatbotContainer.classList.contains('hidden')) {
@@ -148,8 +153,6 @@
             background-size: cover;
             font-family: Arial, sans-serif;
         }
-        
-        /* Chatbot styles */
         .chat-button {
             position: fixed;
             bottom: 20px;
@@ -167,12 +170,10 @@
             z-index: 1000;
             transition: all 0.3s ease;
         }
-        
         .chat-button:hover {
             transform: scale(1.05);
             background-color: #2563eb;
         }
-        
         .chatbot-container {
             position: fixed;
             bottom: 90px;
@@ -186,7 +187,6 @@
             overflow: hidden;
             transition: all 0.3s ease;
         }
-        
         @media (max-width: 640px) {
             .chatbot-container {
                 width: 90%;
@@ -199,24 +199,12 @@
 </head>
 <body class="flex flex-col items-center text-white min-h-screen relative">
     <!-- Top Section: Logo, Greeting, Time & Date -->
-    <div class="absolute top-6 left-6 flex items-center">
-        <a href="index.html" class="flex items-center">
-            <img src="https://i.ibb.co/CpW0wPZG/Screenshot-2025-02-28-205044.png" alt="Logo" class="h-14 w-14 mr-3">
-            <h1 class="text-3xl font-bold text-blue-400">SMART GYM</h1>
-        </a>
-    </div>
-    
-    <div class="absolute top-6 right-6 flex space-x-6 text-xl">
-        <h1 id="greeting" class="font-bold text-3xl uppercase">GOOD MORNING</h1>
-        <p id="time" class="text-3xl font-bold">07 : 35</p>
-        <h2 id="date" class="text-blue-400">SATURDAY MARCH 1, 2025</h2>
-    </div>
-    
+    <!-- existing top content -->
+
     <!-- Main Content -->
     <div class="w-full max-w-4xl mx-auto mt-32 mb-16 px-4">
         <div class="bg-gray-900 bg-opacity-75 p-8 rounded-lg">
             <h2 class="text-2xl text-blue-400 font-bold mb-6">MY PROFILE</h2>
-            
             <!-- User Info -->
             <div class="mb-8">
                 <div class="flex flex-col md:flex-row justify-between mb-4">
@@ -226,33 +214,31 @@
                     </div>
                 </div>
             </div>
-            
             <!-- Profile Form -->
             <div>
                 <div id="message" class="hidden"></div>
-                
                 <div class="mb-4">
                     <label for="nameInput" class="block text-sm text-gray-400 mb-1">Name</label>
                     <input type="text" id="nameInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter your name">
                 </div>
-                
-                <div class="mb-6">
+                <div class="mb-4">
                     <label for="emailInput" class="block text-sm text-gray-400 mb-1">Email</label>
                     <input type="email" id="emailInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter your email">
                 </div>
-                
+                <div class="mb-6">
+                    <label for="passwordInput" class="block text-sm text-gray-400 mb-1">New Password (optional)</label>
+                    <input type="password" id="passwordInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter new password">
+                </div>
                 <div class="flex justify-between">
                     <button id="saveButton" type="button" onclick="saveProfile()" class="px-6 py-3 bg-blue-400 text-white rounded-md hover:bg-blue-500 transition-colors">
                         SAVE CHANGES
                     </button>
-                    
                     <button type="button" onclick="window.location.href='index.html'" class="px-6 py-3 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors">
                         BACK TO DASHBOARD
                     </button>
                 </div>
             </div>
         </div>
-        
         <!-- Logout Button -->
         <div class="mt-6 text-center">
             <button type="button" onclick="logout()" class="text-blue-400 flex items-center mx-auto hover:underline">
@@ -260,21 +246,18 @@
             </button>
         </div>
     </div>
-    
     <!-- Footer: Contact Information -->
     <div class="absolute bottom-6 left-6 text-sm">
         <p class="text-blue-400 font-bold">LOMAKYLÄ RAKKARANTA</p>
         <p>📞 050 400 0373</p>
         <p>📍 Neljäs Avenjuu 3, 89400 Hyrynsalmi</p>
     </div>
-    
     <!-- Chatbot Button -->
     <div id="chat-button" class="chat-button" onclick="toggleChatbot()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
     </div>
-    
     <!-- Chatbot Container -->
     <div id="chatbot-container" class="chatbot-container hidden">
         <iframe
