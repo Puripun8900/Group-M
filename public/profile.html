@@ -10,10 +10,13 @@
         // Dynamic API URL based on environment
         let API_BASE_URL;
 
-        if (window.location.hostname.includes('localhost')) {
-            API_BASE_URL = 'http://localhost:3030';
+        // Set the correct API URL based on environment
+        if (window.location.hostname.includes('localhost') || 
+            window.location.hostname === '127.0.0.1' || 
+            window.location.hostname.includes('172.25.176.1')) {
+            API_BASE_URL = 'http://localhost:3030'; // Updated to port 3030
         } else {
-            API_BASE_URL = '';
+            API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
         }
         
         // Check authentication on page load
@@ -91,39 +94,6 @@
                 
                 // Save updated user info
                 localStorage.setItem('userInfo', JSON.stringify(userInfo));
-                
-                // Also update in userData storage for persistence across logins
-                if (userInfo.username) {
-                    // Get existing user data
-                    const userData = JSON.parse(localStorage.getItem('userData')) || {};
-                    
-                    // Update user data
-                    userData[userInfo.username] = {
-                        name: nameInput.value,
-                        email: emailInput.value
-                    };
-                    
-                    // Save updated user data
-                    localStorage.setItem('userData', JSON.stringify(userData));
-                }
-                
-                // If API_BASE_URL is available, try to update profile on server
-                if (API_BASE_URL) {
-                    const token = localStorage.getItem('token');
-                    if (token) {
-                        await fetch(`${API_BASE_URL}/user/profile`, {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({
-                                name: nameInput.value,
-                                email: emailInput.value
-                            })
-                        });
-                    }
-                }
                 
                 // Show success message
                 showMessage('Profile updated successfully', 'success');
