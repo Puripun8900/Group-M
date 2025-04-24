@@ -3,69 +3,66 @@ const path = require('path');
 const routes = require('./routes/sensorRoutes');
 const connectMongoDB = require('./db/db');
 const authRoutes = require('./routes/authRoutes');
-const { PORT } = require('./config/config');
+const { PORT, NODE_ENV } = require('./config/config');
 const cors = require('cors');
 
 const app = express();
 app.use(express.json());
 
+/**
+ * CORS configuration
+ * Allow requests from specific origins
+ */
 const allowedOrigins = [
-    'http://localhost:5500',            // Local testing
-    'https://smartgym-m.azurewebsites.net'     // Hosted backend with frontend
+    'http://localhost:5500',
+    'http://127.0.0.1:5500',
+    'http://localhost:3030',
+    'https://smartgym-m.azurewebsites.net'
 ];
 
-/**
- * CORS Middleware 
- * This middleware allows cross-origin requests from specified origins.
- * It checks the origin of the request and allows it if it's in the allowedOrigins array.
- * credentials: true; Allow cookies or JWT tokens
- */
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin) || NODE_ENV === 'development') {
             callback(null, true);
         } else {
             callback(new Error('CORS not allowed for this origin'));
         }
     },
-    credentials: true 
+    credentials: true
 }));
 
-//Routes
+// Routes
 app.use('/sensors', routes);
 app.use('/auth', authRoutes);
 
-// Serve static files from 'public'
+/**
+ * Serve static files from the public directory
+ * For example, http://localhost:3030/login.html will serve the login.html file
+ */
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Serve login page at root URL
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'login.html'));
 });
 
-// Serve signup page explicitly
 app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'signup.html'));
 });
 
-// Serve home page (index.html) after login
 app.get('/home', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
-// Catch-all fallback (optional)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'login.html'));
 });
 
-//Mongodb connection
 connectMongoDB();
 
-//server
-const port =  PORT || 3000; // Use environment variable for port to host
-app.listen(port, () => {
-    console.log(`Server is listening at http://localhost:${port}`);
-});
 
+const port = PORT || 3030;
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
 
 module.exports = app;
