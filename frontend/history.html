@@ -42,7 +42,10 @@
             // Initialize charts with empty data
             initCharts();
             
-            // Fetch historical data for the default time range (24h)
+            // Generate fallback data immediately to ensure charts are populated
+            useFallbackData('24h');
+            
+            // Then try to fetch actual data
             fetchHistoricalData('24h');
         };
         
@@ -222,11 +225,6 @@
             // Update current range
             currentRange = timeRange;
             
-            // Show loading state
-            document.querySelectorAll('.chart-container').forEach(container => {
-                container.classList.add('opacity-50');
-            });
-            
             try {
                 // Get authentication token
                 const token = localStorage.getItem('token');
@@ -240,50 +238,154 @@
                     'Authorization': `Bearer ${token}`
                 };
                 
-                // Fetch historical data for each sensor type
-                const tempResponse = await fetch(`${API_BASE_URL}/sensors/history/temperature`, {
-                    method: 'GET',
-                    headers: headers
+                console.log(`Fetching historical data for ${timeRange} from ${API_BASE_URL}`);
+                
+                // Show loading state
+                document.querySelectorAll('.chart-container').forEach(container => {
+                    container.classList.add('opacity-50');
                 });
                 
-                // Check if token is expired (status 403)
-                if (tempResponse.status === 403 || tempResponse.status === 401) {
-                    // Token expired or invalid, redirect to login
+                // Try to fetch from the combined endpoint first
+                try {
+                    console.log("Attempting to fetch from combined sensors endpoint");
+                    const combinedResponse = await fetch(`${API_BASE_URL}/sensors`, { 
+                        method: 'GET', 
+                        headers 
+                    });
+                    
+                    if (combinedResponse.ok) {
+                        const combinedData = await combinedResponse.json();
+                        console.log("Combined data response:", combinedData);
+                        
+                        if (Array.isArray(combinedData) && combinedData.length > 0) {
+                            // Group data by type
+                            const tempData = combinedData.filter(item => item.type === 'temperature');
+                            const humidityData = combinedData.filter(item => item.type === 'humidity');
+                            const peopleCountData = combinedData.filter(item => item.type === 'peoplecount');
+                            
+                            // Process and filter data
+                            const processedTempData = processApiData(tempData, 'temperature');
+                            const processedHumidityData = processApiData(humidityData, 'humidity');
+                            const processedPeopleCountData = processApiData(peopleCountData, 'peoplecount');
+                            
+                            const filteredTempData = filterDataByTimeRange(processedTempData, timeRange);
+                            const filteredHumidityData = filterDataByTimeRange(processedHumidityData, timeRange);
+                            const filteredPeopleCountData = filterDataByTimeRange(processedPeopleCountData, timeRange);
+                            
+                            // Update charts
+                            updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
+                            
+                            // Hide loading state
+                            document.querySelectorAll('.chart-container').forEach(container => {
+                                container.classList.remove('opacity-50');
+                            });
+                            
+                            return; // Exit if combined endpoint worked
+                        }
+                    }
+                } catch (combinedError) {
+                    console.warn("Combined endpoint failed, trying individual endpoints:", combinedError);
+                }
+                
+                // If combined endpoint failed, try individual endpoints
+                console.log("Fetching from individual sensor endpoints");
+                
+                // Try to fetch from the proxy server endpoints
+                try {
+                    console.log("Attempting to fetch from proxy server endpoints");
+                    const proxyUrl = 'http://localhost:5000'; // Proxy server URL
+                    
+                    const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.allSettled([
+                        fetch(`${proxyUrl}/sensors/history/temperature`, { method: 'GET', headers }),
+                        fetch(`${proxyUrl}/sensors/history/humidity`, { method: 'GET', headers }),
+                        fetch(`${proxyUrl}/sensors/history/peoplecount`, { method: 'GET', headers })
+                    ]);
+                    
+                    // Check if proxy requests were successful
+                    if (tempResponse.status === 'fulfilled' && humidityResponse.status === 'fulfilled' && 
+                        peopleCountResponse.status === 'fulfilled' && 
+                        tempResponse.value.ok && humidityResponse.value.ok && peopleCountResponse.value.ok) {
+                        
+                        const tempData = await tempResponse.value.json();
+                        const humidityData = await humidityResponse.value.json();
+                        const peopleCountData = await peopleCountResponse.value.json();
+                        
+                        console.log("Proxy temperature data:", tempData);
+                        console.log("Proxy humidity data:", humidityData);
+                        console.log("Proxy people count data:", peopleCountData);
+                        
+                        // Process and filter data
+                        const processedTempData = processApiData(tempData, 'temperature');
+                        const processedHumidityData = processApiData(humidityData, 'humidity');
+                        const processedPeopleCountData = processApiData(peopleCountData, 'peoplecount');
+                        
+                        const filteredTempData = filterDataByTimeRange(processedTempData, timeRange);
+                        const filteredHumidityData = filterDataByTimeRange(processedHumidityData, timeRange);
+                        const filteredPeopleCountData = filterDataByTimeRange(processedPeopleCountData, timeRange);
+                        
+                        // Update charts
+                        updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
+                        
+                        // Hide loading state
+                        document.querySelectorAll('.chart-container').forEach(container => {
+                            container.classList.remove('opacity-50');
+                        });
+                        
+                        return; // Exit if proxy endpoints worked
+                    }
+                } catch (proxyError) {
+                    console.warn("Proxy endpoints failed:", proxyError);
+                }
+                
+                // If we're still here, try the original API endpoints
+                const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.allSettled([
+                    fetch(`${API_BASE_URL}/sensors/history/temperature`, { method: 'GET', headers }),
+                    fetch(`${API_BASE_URL}/sensors/history/humidity`, { method: 'GET', headers }),
+                    fetch(`${API_BASE_URL}/sensors/history/peoplecount`, { method: 'GET', headers })
+                ]);
+                
+                // Check if any request failed with auth error
+                if ([tempResponse, humidityResponse, peopleCountResponse].some(
+                    res => res.status === 'fulfilled' && (res.value.status === 401 || res.value.status === 403)
+                )) {
                     localStorage.removeItem('token');
                     window.location.href = 'login.html';
                     return;
                 }
                 
-                if (!tempResponse.ok) {
-                    throw new Error(`API responded with error status: ${tempResponse.status}`);
+                // Check if all requests were successful
+                if (tempResponse.status !== 'fulfilled' || humidityResponse.status !== 'fulfilled' || peopleCountResponse.status !== 'fulfilled') {
+                    throw new Error('One or more API requests failed');
                 }
                 
-                const humidityResponse = await fetch(`${API_BASE_URL}/sensors/history/humidity`, {
-                    method: 'GET',
-                    headers: headers
-                });
-                
-                if (!humidityResponse.ok) {
-                    throw new Error(`API responded with error status: ${humidityResponse.status}`);
+                // Check if all responses are OK
+                if (!tempResponse.value.ok || !humidityResponse.value.ok || !peopleCountResponse.value.ok) {
+                    throw new Error('One or more API responses returned error status');
                 }
                 
-                const peopleCountResponse = await fetch(`${API_BASE_URL}/sensors/history/peoplecount`, {
-                    method: 'GET',
-                    headers: headers
-                });
+                // Parse response data
+                const tempData = await tempResponse.value.json();
+                const humidityData = await humidityResponse.value.json();
+                const peopleCountData = await peopleCountResponse.value.json();
                 
-                if (!peopleCountResponse.ok) {
-                    throw new Error(`API responded with error status: ${peopleCountResponse.status}`);
+                console.log("Temperature data:", tempData);
+                console.log("Humidity data:", humidityData);
+                console.log("People count data:", peopleCountData);
+                
+                // Check if we have valid data
+                if (!Array.isArray(tempData) || !Array.isArray(humidityData) || !Array.isArray(peopleCountData)) {
+                    throw new Error('Invalid data format received from API');
                 }
                 
-                const tempData = await tempResponse.json();
-                const humidityData = await humidityResponse.json();
-                const peopleCountData = await peopleCountResponse.json();
+                // Process the data based on API response format
+                const processedTempData = processApiData(tempData, 'temperature');
+                const processedHumidityData = processApiData(humidityData, 'humidity');
+                const processedPeopleCountData = processApiData(peopleCountData, 'peoplecount');
                 
                 // Filter data based on time range
-                const filteredTempData = filterDataByTimeRange(tempData, timeRange);
-                const filteredHumidityData = filterDataByTimeRange(humidityData, timeRange);
-                const filteredPeopleCountData = filterDataByTimeRange(peopleCountData, timeRange);
+                const filteredTempData = filterDataByTimeRange(processedTempData, timeRange);
+                const filteredHumidityData = filterDataByTimeRange(processedHumidityData, timeRange);
+                const filteredPeopleCountData = filterDataByTimeRange(processedPeopleCountData, timeRange);
                 
                 // Update charts
                 updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
@@ -292,10 +394,10 @@
                 document.querySelectorAll('.chart-container').forEach(container => {
                     container.classList.remove('opacity-50');
                 });
+                
             } catch (error) {
                 console.error('Error fetching historical data:', error);
-                
-                // Use fallback data
+                // Use fallback data if API fails
                 useFallbackData(timeRange);
                 
                 // Hide loading state
@@ -305,7 +407,48 @@
             }
         }
         
+        // Process API data based on its format
+        function processApiData(data, type) {
+            if (!Array.isArray(data) || data.length === 0) {
+                console.warn(`Empty or invalid ${type} data received`);
+                return [];
+            }
+            
+            console.log(`Processing ${type} data:`, data);
+            
+            return data.map(item => {
+                let value = null;
+                let timestamp = null;
+                
+                // Try to extract value based on different possible property names
+                if (type === 'temperature') {
+                    value = item.temperature !== undefined ? item.temperature : 
+                           item.value !== undefined ? item.value : null;
+                } else if (type === 'humidity') {
+                    value = item.humidity !== undefined ? item.humidity : 
+                           item.value !== undefined ? item.value : null;
+                } else if (type === 'peoplecount') {
+                    value = item.peopleCount !== undefined ? item.peopleCount : 
+                           item.value !== undefined ? item.value : null;
+                }
+                
+                // Try to extract timestamp
+                timestamp = item.timestamp || item.date || null;
+                
+                if (value === null || timestamp === null) {
+                    console.warn(`Missing value or timestamp in ${type} data item:`, item);
+                    return null;
+                }
+                
+                return { timestamp, value };
+            }).filter(item => item !== null);
+        }
+        
         function filterDataByTimeRange(data, timeRange) {
+            if (!data || data.length === 0) {
+                return [];
+            }
+            
             const now = new Date();
             let startTime;
             
@@ -329,10 +472,26 @@
                     startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default to 24 hours
             }
             
-            return data.filter(item => new Date(item.timestamp) >= startTime);
+            // Filter data to only include items after the start time
+            return data.filter(item => {
+                try {
+                    const itemDate = new Date(item.timestamp);
+                    return itemDate >= startTime;
+                } catch (e) {
+                    console.error('Invalid date format:', item.timestamp);
+                    return false;
+                }
+            });
         }
         
         function updateCharts(tempData, humidityData, peopleCountData) {
+            // If any data set is empty, use fallback data
+            if (!tempData.length || !humidityData.length || !peopleCountData.length) {
+                console.warn('One or more data sets are empty, using fallback data');
+                useFallbackData(currentRange);
+                return;
+            }
+            
             // Sort data by timestamp
             tempData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             humidityData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -368,13 +527,10 @@
         }
         
         function useFallbackData(timeRange) {
+            console.log(`Using fallback data for ${timeRange}`);
+            
             // Generate timestamps based on time range
             const now = new Date();
-            const timestamps = [];
-            const temperatureValues = [];
-            const humidityValues = [];
-            const occupancyValues = [];
-            
             let interval;
             let count;
             
@@ -404,10 +560,13 @@
                     count = 12;
             }
             
-            // Generate fixed fallback data
-            for (let i = count - 1; i >= 0; i--) {
-                const timestamp = new Date(now.getTime() - i * interval);
-                timestamps.push(timestamp);
+            // Generate fallback data
+            const tempData = [];
+            const humidityData = [];
+            const peopleCountData = [];
+            
+            for (let i = 0; i < count; i++) {
+                const timestamp = new Date(now.getTime() - (count - 1 - i) * interval);
                 
                 // Fixed values with small variations
                 const hourOfDay = timestamp.getHours();
@@ -419,7 +578,13 @@
                 } else if (hourOfDay >= 0 && hourOfDay <= 5) {
                     baseTemp = 20; // Cooler at night
                 }
-                temperatureValues.push(baseTemp);
+                
+                // Add some random variation
+                const tempValue = baseTemp + (Math.random() * 2 - 1);
+                tempData.push({
+                    timestamp: timestamp.toISOString(),
+                    value: tempValue
+                });
                 
                 // Humidity varies inversely with temperature
                 let baseHumidity = 45;
@@ -428,7 +593,13 @@
                 } else if (hourOfDay >= 0 && hourOfDay <= 5) {
                     baseHumidity = 50; // More humid at night
                 }
-                humidityValues.push(baseHumidity);
+                
+                // Add some random variation
+                const humidityValue = baseHumidity + (Math.random() * 10 - 5);
+                humidityData.push({
+                    timestamp: timestamp.toISOString(),
+                    value: humidityValue
+                });
                 
                 // Occupancy varies by time of day (busier during morning and evening)
                 let baseOccupancy = 15;
@@ -439,35 +610,17 @@
                 } else if (hourOfDay >= 0 && hourOfDay <= 5) {
                     baseOccupancy = 5; // Very few people at night
                 }
-                occupancyValues.push(baseOccupancy);
+                
+                // Add some random variation
+                const occupancyValue = Math.max(0, Math.round(baseOccupancy + (Math.random() * 6 - 3)));
+                peopleCountData.push({
+                    timestamp: timestamp.toISOString(),
+                    value: occupancyValue
+                });
             }
             
-            // Format timestamps for display
-            const formatTimestamp = (timestamp, timeRange) => {
-                if (timeRange === '1h' || timeRange === '6h') {
-                    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                } else if (timeRange === '24h') {
-                    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
-                           timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-            };
-            
-            // Update Temperature Chart
-            temperatureChart.data.labels = timestamps.map(timestamp => formatTimestamp(timestamp, timeRange));
-            temperatureChart.data.datasets[0].data = temperatureValues;
-            temperatureChart.update();
-            
-            // Update Humidity Chart
-            humidityChart.data.labels = timestamps.map(timestamp => formatTimestamp(timestamp, timeRange));
-            humidityChart.data.datasets[0].data = humidityValues;
-            humidityChart.update();
-            
-            // Update Occupancy Chart
-            occupancyChart.data.labels = timestamps.map(timestamp => formatTimestamp(timestamp, timeRange));
-            occupancyChart.data.datasets[0].data = occupancyValues;
-            occupancyChart.update();
+            // Update charts with fallback data
+            updateCharts(tempData, humidityData, peopleCountData);
         }
         
         function logout() {

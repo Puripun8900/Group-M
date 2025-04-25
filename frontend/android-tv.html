@@ -7,8 +7,17 @@
     <title>Smart Gym - TV Display</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Global API URL
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
+        // Dynamic API URL based on environment
+        let API_BASE_URL;
+
+        // Set the correct API URL based on environment
+        if (window.location.hostname.includes('localhost') || 
+            window.location.hostname === '127.0.0.1' || 
+            window.location.hostname.includes('172.25.176.1')) {
+            API_BASE_URL = 'http://localhost:3030'; // Local development
+        } else {
+            API_BASE_URL = window.location.origin; // Use the current origin for production
+        }
         
         function updateTime() {
             const now = new Date();
@@ -41,36 +50,127 @@
                     });
                 }
                 
-                const response = await fetch(`${API_BASE_URL}/sensors/latest`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                console.log(`Fetching data from: ${API_BASE_URL}/sensors/latest`);
                 
-                if (!response.ok) {
-                    throw new Error(`API responded with status: ${response.status}`);
+                // Get authentication token if available
+                const token = localStorage.getItem('token');
+                const headers = {
+                    'Accept': 'application/json'
+                };
+                
+                // Add authorization header if token exists
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
                 }
                 
-                const data = await response.json();
-                
-                // Update temperature
-                document.getElementById('tempValue').innerText = data.temperature.toFixed(1);
-                document.getElementById('tempUnit').innerText = '°C';
-                
-                // Update humidity
-                document.getElementById('humidityValue').innerText = `${data.humidity.toFixed(0)}%`;
-                
-                // Update occupancy
-                document.getElementById('currentOccupancy').innerText = data.peopleCount;
-                
-                // For demonstration, we'll set these values based on current occupancy
-                document.getElementById('enteredCount').innerText = data.peopleCount + 5;
-                document.getElementById('exitedCount').innerText = '5';
+                // Try to fetch from the combined endpoint first
+                try {
+                    const response = await fetch(`${API_BASE_URL}/sensors/latest`, {
+                        method: 'GET',
+                        headers: headers
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log("API response data:", data);
+                        
+                        // Update temperature
+                        if (data.temperature !== undefined) {
+                            document.getElementById('tempValue').innerText = data.temperature.toFixed(1);
+                            document.getElementById('tempUnit').innerText = '°C';
+                        }
+                        
+                        // Update humidity
+                        if (data.humidity !== undefined) {
+                            document.getElementById('humidityValue').innerText = `${data.humidity.toFixed(0)}%`;
+                        }
+                        
+                        // Update occupancy
+                        if (data.peopleCount !== undefined) {
+                            document.getElementById('currentOccupancy').innerText = data.peopleCount;
+                            
+                            // For demonstration, we'll set these values based on current occupancy
+                            document.getElementById('enteredCount').innerText = data.peopleCount + 5;
+                            document.getElementById('exitedCount').innerText = '5';
 
-                const maxOccupancy = 50;
-                const occupancyRatio = (data.peopleCount / maxOccupancy) * 100;
-                document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
+                            const maxOccupancy = 50;
+                            const occupancyRatio = (data.peopleCount / maxOccupancy) * 100;
+                            document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
+                        }
+                        
+                        // Hide loading overlays
+                        document.querySelectorAll('.loading-overlay').forEach(el => {
+                            el.classList.add('hidden');
+                        });
+                        
+                        // Show last updated time
+                        const lastUpdated = new Date();
+                        document.getElementById('lastUpdated').innerText = 
+                            `Last updated: ${lastUpdated.getHours().toString().padStart(2, '0')}:${lastUpdated.getMinutes().toString().padStart(2, '0')}:${lastUpdated.getSeconds().toString().padStart(2, '0')}`;
+                        
+                        return; // Exit if combined endpoint worked
+                    }
+                } catch (combinedError) {
+                    console.warn("Combined endpoint failed, trying individual endpoints:", combinedError);
+                }
+                
+                // If combined endpoint failed, try individual endpoints
+                const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.allSettled([
+                    fetch(`${API_BASE_URL}/sensors/latest/temperature`, { method: 'GET', headers }),
+                    fetch(`${API_BASE_URL}/sensors/latest/humidity`, { method: 'GET', headers }),
+                    fetch(`${API_BASE_URL}/sensors/latest/peoplecount`, { method: 'GET', headers })
+                ]);
+                
+                // Process temperature data
+                if (tempResponse.status === 'fulfilled' && tempResponse.value.ok) {
+                    const tempData = await tempResponse.value.json();
+                    console.log("Temperature data:", tempData);
+                    
+                    // Handle different API response formats
+                    const tempValue = tempData.temperature !== undefined ? tempData.temperature : 
+                                     tempData.value !== undefined ? tempData.value : null;
+                    
+                    if (tempValue !== null) {
+                        document.getElementById('tempValue').innerText = tempValue.toFixed(1);
+                        document.getElementById('tempUnit').innerText = '°C';
+                    }
+                }
+                
+                // Process humidity data
+                if (humidityResponse.status === 'fulfilled' && humidityResponse.value.ok) {
+                    const humidityData = await humidityResponse.value.json();
+                    console.log("Humidity data:", humidityData);
+                    
+                    // Handle different API response formats
+                    const humidityValue = humidityData.humidity !== undefined ? humidityData.humidity : 
+                                         humidityData.value !== undefined ? humidityData.value : null;
+                    
+                    if (humidityValue !== null) {
+                        document.getElementById('humidityValue').innerText = `${humidityValue.toFixed(0)}%`;
+                    }
+                }
+                
+                // Process people count data
+                if (peopleCountResponse.status === 'fulfilled' && peopleCountResponse.value.ok) {
+                    const peopleCountData = await peopleCountResponse.value.json();
+                    console.log("People count data:", peopleCountData);
+                    
+                    // Handle different API response formats
+                    const peopleCount = peopleCountData.peopleCount !== undefined ? peopleCountData.peopleCount : 
+                                       peopleCountData.value !== undefined ? peopleCountData.value : null;
+                    
+                    if (peopleCount !== null) {
+                        document.getElementById('currentOccupancy').innerText = peopleCount;
+                        
+                        // For demonstration, we'll set these values based on current occupancy
+                        document.getElementById('enteredCount').innerText = peopleCount + 5;
+                        document.getElementById('exitedCount').innerText = '5';
+
+                        const maxOccupancy = 50;
+                        const occupancyRatio = (peopleCount / maxOccupancy) * 100;
+                        document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
+                    }
+                }
                 
                 // Hide loading overlays
                 document.querySelectorAll('.loading-overlay').forEach(el => {
@@ -81,6 +181,7 @@
                 const lastUpdated = new Date();
                 document.getElementById('lastUpdated').innerText = 
                     `Last updated: ${lastUpdated.getHours().toString().padStart(2, '0')}:${lastUpdated.getMinutes().toString().padStart(2, '0')}:${lastUpdated.getSeconds().toString().padStart(2, '0')}`;
+                
             } catch (error) {
                 console.error('Error fetching data:', error);
                 useFallbackData();
@@ -88,6 +189,8 @@
         }
         
         function useFallbackData() {
+            console.log("Using fallback data");
+            
             document.getElementById('tempValue').innerText = '22.5';
             document.getElementById('tempUnit').innerText = '°C';
             document.getElementById('humidityValue').innerText = '45%';
@@ -105,6 +208,9 @@
             const lastUpdated = new Date();
             document.getElementById('lastUpdated').innerText = 
                 `Last updated: ${lastUpdated.getHours().toString().padStart(2, '0')}:${lastUpdated.getMinutes().toString().padStart(2, '0')}:${lastUpdated.getSeconds().toString().padStart(2, '0')}`;
+            
+            // Add sample data indicator
+            document.getElementById('lastUpdated').innerHTML += ' <span class="bg-yellow-500 text-black px-2 py-1 rounded text-sm ml-2">SAMPLE DATA</span>';
         }
     </script>
 
