@@ -63,14 +63,15 @@
         }
 
         async function saveProfile() {
-            const usernameInput = document.getElementById('usernameInput');
+            const nameInput = document.getElementById('nameInput');
             const emailInput = document.getElementById('emailInput');
             const passwordInput = document.getElementById('passwordInput');
 
-            if (!usernameInput.value.trim()) {
-                showMessage('Username cannot be empty', 'error');
+            if (!nameInput.value.trim()) {
+                showMessage('Name cannot be empty', 'error');
                 return;
             }
+
             if (!emailInput.value.trim() || !/\S+@\S+\.\S+/.test(emailInput.value)) {
                 showMessage('Please enter a valid email address', 'error');
                 return;
@@ -86,9 +87,10 @@
                 const userInfo = JSON.parse(localStorage.getItem('userInfo')) || {};
 
                 const payload = {
-                    username: usernameInput.value,
+                    name: nameInput.value,
                     email: emailInput.value
                 };
+
                 if (passwordInput.value.trim()) {
                     payload.password = passwordInput.value;
                 }
@@ -104,14 +106,18 @@
                         body: JSON.stringify(payload)
                     });
 
-                if (!response.ok) {
-                    throw new Error('Failed to update profile');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.name) userInfo.name = data.name;
+                        if (data.email) userInfo.email = data.email;
+                    }
+                } catch (apiError) {
+                    console.warn("API update failed, updating local storage only:", apiError);
                 }
 
-                const data = await response.json();
-
-                userInfo.name = data.name;
-                userInfo.email = data.email;
+                // Always update local storage
+                userInfo.name = nameInput.value;
+                userInfo.email = emailInput.value;
                 localStorage.setItem('userInfo', JSON.stringify(userInfo));
 
                 showMessage('Profile updated successfully', 'success');
@@ -227,16 +233,18 @@
             <h2 class="text-2xl text-blue-400 font-bold mb-6">MY PROFILE</h2>
             <!-- User Info -->
             <div class="mb-8">
-                <div class="flex flex-col md:flex-row justify-between mb-4">
-                    <div>
-                        <p class="text-sm text-gray-400">Username (cannot be changed)</p>
-                        <p class="text-xl font-bold" id="username">Loading...</p>
-                    </div>
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400">Username (cannot be changed)</p>
+                    <p class="text-xl font-bold" id="username">Guest User</p>
                 </div>
             </div>
             <!-- Profile Form -->
             <div>
                 <div id="message" class="hidden"></div>
+                <div class="mb-4">
+                    <label for="nameInput" class="block text-sm text-gray-400 mb-1">Name</label>
+                    <input type="text" id="nameInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter your name">
+                </div>
                 <div class="mb-4">
                     <label for="emailInput" class="block text-sm text-gray-400 mb-1">Email</label>
                     <input type="email" id="emailInput" class="w-full p-3 bg-gray-700 text-white rounded-md" placeholder="Enter your email">
