@@ -25,6 +25,7 @@
         let humidityChart;
         let occupancyChart;
         let currentRange = '24h';
+        let usingSampleData = false;
         
         // Check authentication on page load
         window.onload = function() {
@@ -245,99 +246,7 @@
                     container.classList.add('opacity-50');
                 });
                 
-                // Try to fetch from the combined endpoint first
-                try {
-                    console.log("Attempting to fetch from combined sensors endpoint");
-                    const combinedResponse = await fetch(`${API_BASE_URL}/sensors`, { 
-                        method: 'GET', 
-                        headers 
-                    });
-                    
-                    if (combinedResponse.ok) {
-                        const combinedData = await combinedResponse.json();
-                        console.log("Combined data response:", combinedData);
-                        
-                        if (Array.isArray(combinedData) && combinedData.length > 0) {
-                            // Group data by type
-                            const tempData = combinedData.filter(item => item.type === 'temperature');
-                            const humidityData = combinedData.filter(item => item.type === 'humidity');
-                            const peopleCountData = combinedData.filter(item => item.type === 'peoplecount');
-                            
-                            // Process and filter data
-                            const processedTempData = processApiData(tempData, 'temperature');
-                            const processedHumidityData = processApiData(humidityData, 'humidity');
-                            const processedPeopleCountData = processApiData(peopleCountData, 'peoplecount');
-                            
-                            const filteredTempData = filterDataByTimeRange(processedTempData, timeRange);
-                            const filteredHumidityData = filterDataByTimeRange(processedHumidityData, timeRange);
-                            const filteredPeopleCountData = filterDataByTimeRange(processedPeopleCountData, timeRange);
-                            
-                            // Update charts
-                            updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
-                            
-                            // Hide loading state
-                            document.querySelectorAll('.chart-container').forEach(container => {
-                                container.classList.remove('opacity-50');
-                            });
-                            
-                            return; // Exit if combined endpoint worked
-                        }
-                    }
-                } catch (combinedError) {
-                    console.warn("Combined endpoint failed, trying individual endpoints:", combinedError);
-                }
-                
-                // If combined endpoint failed, try individual endpoints
-                console.log("Fetching from individual sensor endpoints");
-                
-                // Try to fetch from the proxy server endpoints
-                try {
-                    console.log("Attempting to fetch from proxy server endpoints");
-                    const proxyUrl = 'http://localhost:5000'; // Proxy server URL
-                    
-                    const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.allSettled([
-                        fetch(`${proxyUrl}/sensors/history/temperature`, { method: 'GET', headers }),
-                        fetch(`${proxyUrl}/sensors/history/humidity`, { method: 'GET', headers }),
-                        fetch(`${proxyUrl}/sensors/history/peoplecount`, { method: 'GET', headers })
-                    ]);
-                    
-                    // Check if proxy requests were successful
-                    if (tempResponse.status === 'fulfilled' && humidityResponse.status === 'fulfilled' && 
-                        peopleCountResponse.status === 'fulfilled' && 
-                        tempResponse.value.ok && humidityResponse.value.ok && peopleCountResponse.value.ok) {
-                        
-                        const tempData = await tempResponse.value.json();
-                        const humidityData = await humidityResponse.value.json();
-                        const peopleCountData = await peopleCountResponse.value.json();
-                        
-                        console.log("Proxy temperature data:", tempData);
-                        console.log("Proxy humidity data:", humidityData);
-                        console.log("Proxy people count data:", peopleCountData);
-                        
-                        // Process and filter data
-                        const processedTempData = processApiData(tempData, 'temperature');
-                        const processedHumidityData = processApiData(humidityData, 'humidity');
-                        const processedPeopleCountData = processApiData(peopleCountData, 'peoplecount');
-                        
-                        const filteredTempData = filterDataByTimeRange(processedTempData, timeRange);
-                        const filteredHumidityData = filterDataByTimeRange(processedHumidityData, timeRange);
-                        const filteredPeopleCountData = filterDataByTimeRange(processedPeopleCountData, timeRange);
-                        
-                        // Update charts
-                        updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
-                        
-                        // Hide loading state
-                        document.querySelectorAll('.chart-container').forEach(container => {
-                            container.classList.remove('opacity-50');
-                        });
-                        
-                        return; // Exit if proxy endpoints worked
-                    }
-                } catch (proxyError) {
-                    console.warn("Proxy endpoints failed:", proxyError);
-                }
-                
-                // If we're still here, try the original API endpoints
+                // Fetch data from individual endpoints
                 const [tempResponse, humidityResponse, peopleCountResponse] = await Promise.allSettled([
                     fetch(`${API_BASE_URL}/sensors/history/temperature`, { method: 'GET', headers }),
                     fetch(`${API_BASE_URL}/sensors/history/humidity`, { method: 'GET', headers }),
@@ -354,13 +263,15 @@
                 }
                 
                 // Check if all requests were successful
-                if (tempResponse.status !== 'fulfilled' || humidityResponse.status !== 'fulfilled' || peopleCountResponse.status !== 'fulfilled') {
-                    throw new Error('One or more API requests failed');
-                }
+                const allSuccessful = tempResponse.status === 'fulfilled' && 
+                                     humidityResponse.status === 'fulfilled' && 
+                                     peopleCountResponse.status === 'fulfilled' &&
+                                     tempResponse.value.ok && 
+                                     humidityResponse.value.ok && 
+                                     peopleCountResponse.value.ok;
                 
-                // Check if all responses are OK
-                if (!tempResponse.value.ok || !humidityResponse.value.ok || !peopleCountResponse.value.ok) {
-                    throw new Error('One or more API responses returned error status');
+                if (!allSuccessful) {
+                    throw new Error('One or more API requests failed');
                 }
                 
                 // Parse response data
@@ -378,17 +289,33 @@
                 }
                 
                 // Process the data based on API response format
-                const processedTempData = processApiData(tempData, 'temperature');
-                const processedHumidityData = processApiData(humidityData, 'humidity');
-                const processedPeopleCountData = processApiData(peopleCountData, 'peoplecount');
+                const processedTempData = processApiData(tempData, 'Temperature');
+                const processedHumidityData = processApiData(humidityData, 'Humidity');
+                const processedPeopleCountData = processApiData(peopleCountData, 'PeopleCount');
+                
+                console.log("Processed temperature data:", processedTempData);
+                console.log("Processed humidity data:", processedHumidityData);
+                console.log("Processed people count data:", processedPeopleCountData);
                 
                 // Filter data based on time range
                 const filteredTempData = filterDataByTimeRange(processedTempData, timeRange);
                 const filteredHumidityData = filterDataByTimeRange(processedHumidityData, timeRange);
                 const filteredPeopleCountData = filterDataByTimeRange(processedPeopleCountData, timeRange);
                 
-                // Update charts
-                updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
+                console.log("Filtered temperature data:", filteredTempData);
+                console.log("Filtered humidity data:", filteredHumidityData);
+                console.log("Filtered people count data:", filteredPeopleCountData);
+                
+                // Check if we have enough data to display
+                if (filteredTempData.length > 0 && filteredHumidityData.length > 0 && filteredPeopleCountData.length > 0) {
+                    // Update charts with real data
+                    updateCharts(filteredTempData, filteredHumidityData, filteredPeopleCountData);
+                    usingSampleData = false;
+                } else {
+                    console.warn('Not enough filtered data available, using fallback data');
+                    useFallbackData(timeRange);
+                    usingSampleData = true;
+                }
                 
                 // Hide loading state
                 document.querySelectorAll('.chart-container').forEach(container => {
@@ -399,6 +326,7 @@
                 console.error('Error fetching historical data:', error);
                 // Use fallback data if API fails
                 useFallbackData(timeRange);
+                usingSampleData = true;
                 
                 // Hide loading state
                 document.querySelectorAll('.chart-container').forEach(container => {
@@ -420,20 +348,19 @@
                 let value = null;
                 let timestamp = null;
                 
-                // Try to extract value based on different possible property names
-                if (type === 'temperature') {
-                    value = item.temperature !== undefined ? item.temperature : 
-                           item.value !== undefined ? item.value : null;
-                } else if (type === 'humidity') {
-                    value = item.humidity !== undefined ? item.humidity : 
-                           item.value !== undefined ? item.value : null;
-                } else if (type === 'peoplecount') {
-                    value = item.peopleCount !== undefined ? item.peopleCount : 
-                           item.value !== undefined ? item.value : null;
+                // Extract value based on the API response format
+                if (item.value !== undefined) {
+                    value = parseFloat(item.value);
+                } else if (item.temperature !== undefined && type === 'Temperature') {
+                    value = parseFloat(item.temperature);
+                } else if (item.humidity !== undefined && type === 'Humidity') {
+                    value = parseFloat(item.humidity);
+                } else if (item.peopleCount !== undefined && type === 'PeopleCount') {
+                    value = parseInt(item.peopleCount);
                 }
                 
-                // Try to extract timestamp
-                timestamp = item.timestamp || item.date || null;
+                // Extract timestamp from createdAt or timestamp field
+                timestamp = item.createdAt || item.timestamp || item.date || null;
                 
                 if (value === null || timestamp === null) {
                     console.warn(`Missing value or timestamp in ${type} data item:`, item);

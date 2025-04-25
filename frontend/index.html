@@ -19,6 +19,11 @@
             API_BASE_URL = window.location.origin; // Use the current origin for production
         }
         
+        // Variables to track occupancy changes
+        let previousOccupancy = 0;
+        let totalEntered = 0;
+        let totalExited = 0;
+        
         // Check authentication on page load
         window.onload = function() {
             // Check if user is authenticated
@@ -118,14 +123,34 @@
                 document.getElementById('humidityValue').innerText = `${parseFloat(humidityData.humidity).toFixed(0)}%`;
                 
                 // Update occupancy - API returns { peopleCount: value }
-                document.getElementById('currentOccupancy').innerText = peopleCountData.peopleCount;
+                const currentOccupancy = parseInt(peopleCountData.peopleCount);
+                document.getElementById('currentOccupancy').innerText = currentOccupancy;
                 
-                // For demonstration, we'll set these values based on current occupancy
-                document.getElementById('enteredCount').innerText = parseInt(peopleCountData.peopleCount) + 5;
-                document.getElementById('exitedCount').innerText = '5';
+                // Update entered/exited counts based on occupancy changes
+                if (previousOccupancy > 0) {
+                    if (currentOccupancy > previousOccupancy) {
+                        // People entered
+                        const entered = currentOccupancy - previousOccupancy;
+                        totalEntered += entered;
+                    } else if (currentOccupancy < previousOccupancy) {
+                        // People exited
+                        const exited = previousOccupancy - currentOccupancy;
+                        totalExited += exited;
+                    }
+                } else {
+                    // First load, initialize with current values
+                    totalEntered = currentOccupancy;
+                }
+                
+                // Update the entered/exited counts
+                document.getElementById('enteredCount').innerText = totalEntered;
+                document.getElementById('exitedCount').innerText = totalExited;
+                
+                // Save current occupancy for next comparison
+                previousOccupancy = currentOccupancy;
 
                 const maxOccupancy = 50;
-                const occupancyRatio = (parseInt(peopleCountData.peopleCount) / maxOccupancy) * 100;
+                const occupancyRatio = (currentOccupancy / maxOccupancy) * 100;
                 document.getElementById('occupancyBar').style.width = `${occupancyRatio}%`;
                 
                 // Get user info from localStorage
@@ -157,9 +182,18 @@
             document.getElementById('tempValue').innerText = '22.5';
             document.getElementById('tempUnit').innerText = '°C';
             document.getElementById('humidityValue').innerText = '45%';
-            document.getElementById('currentOccupancy').innerText = '15';
-            document.getElementById('enteredCount').innerText = '20';
-            document.getElementById('exitedCount').innerText = '5';
+            
+            // Set initial occupancy
+            const initialOccupancy = 15;
+            document.getElementById('currentOccupancy').innerText = initialOccupancy;
+            previousOccupancy = initialOccupancy;
+            
+            // Initialize entered/exited counts
+            totalEntered = initialOccupancy;
+            totalExited = 0;
+            document.getElementById('enteredCount').innerText = totalEntered;
+            document.getElementById('exitedCount').innerText = totalExited;
+            
             document.getElementById('occupancyBar').style.width = '30%';
             
             // Get user info from localStorage
@@ -169,8 +203,8 @@
             document.getElementById('userName').innerText = userInfo.username || "User";
         }
 
-        // Refresh data every 30 seconds
-        setInterval(fetchData, 30000);
+        // Refresh data every 3 seconds
+        setInterval(fetchData, 3000);
         
         function logout() {
             localStorage.removeItem('userInfo');
