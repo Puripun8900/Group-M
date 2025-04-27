@@ -5,11 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Sign Up - Smart Gym</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script>
-        // Global API URL - Use local proxy for development
-        const API_BASE_URL = 'https://smartgym-m.azurewebsites.net';
-        const REMOTE_API_URL = 'https://smartgym-m.azurewebsites.net';
+        // Dynamic API URL based on environment
+        let API_BASE_URL;
+
+        // Set the correct API URL based on environment
+        if (window.location.hostname.includes('localhost') || 
+            window.location.hostname === '127.0.0.1' || 
+            window.location.hostname.includes('172.25.176.1')) {
+            API_BASE_URL = 'http://localhost:3030';
+        } else {
+            API_BASE_URL = window.location.origin; // Use the current origin for production
+        }
+        
+        // Check if user is already logged in
+        window.onload = function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // Redirect to index page if already logged in
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            updateTime();
+            setInterval(updateTime, 60000); // Update time every minute
+        };
         
         function updateTime() {
             const now = new Date();
@@ -28,8 +49,6 @@
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             document.getElementById('date').innerText = now.toLocaleDateString('en-US', options).toUpperCase();
         }
-        setInterval(updateTime, 60000); // Update time every minute
-        window.onload = updateTime;
         
         function goToIndexAsGuest() {
             // Clear any existing user data
@@ -74,29 +93,42 @@
             const originalButtonText = signupButton.innerHTML;
             signupButton.disabled = true;
             signupButton.innerHTML = '<div class="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div> Signing up...';
-    
+
             // Validate inputs
             if (username.trim() === '' || email.trim() === '' || password.trim() === '' || confirmPassword.trim() === '') {
                 showError("All fields are required");
                 resetButton();
                 return;
             }
-    
+
             if (password !== confirmPassword) {
                 showError("Passwords do not match");
                 resetButton();
                 return;
             }
-    
+
             if (!/\S+@\S+\.\S+/.test(email)) {
                 showError("Please enter a valid email address");
                 resetButton();
                 return;
             }
-    
+
             try {
-                // For demo purposes, we'll simulate a successful signup
-                // In a real app, you would connect to your authentication API
+                // Use the proxy server to avoid CORS issues
+                const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || "Signup failed");
+                }
                 
                 // Generate a consistent customer number for this username
                 const customerNumber = generateCustomerNumber(username);

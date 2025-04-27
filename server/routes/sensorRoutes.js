@@ -34,7 +34,7 @@ router.get("/", authenticateToken, async (req, res) => {
  */
 router.get("/latest/temperature", authenticateToken, async (req, res) => {
   try {
-    const latest = await Sensor.findOne({ type: "Temperature" }).sort({ timestamp: -1 });
+    const latest = await Sensor.findOne({ type: "Temperature" }).sort({createdAt: -1 });
     res.json({ temperature: latest ? latest.value : "No data" });
   } catch (error) {
     console.error(error.stack);
@@ -48,7 +48,7 @@ router.get("/latest/temperature", authenticateToken, async (req, res) => {
  */
 router.get("/latest/humidity", authenticateToken, async (req, res) => {
   try {
-    const latest = await Sensor.findOne({ type: "Humidity" }).sort({ timestamp: -1 });
+    const latest = await Sensor.findOne({ type: "Humidity" }).sort({createdAt: -1 });
     res.json({ humidity: latest ? latest.value : "No data" });
   } catch (error) {
     console.error(error.stack);
@@ -62,7 +62,7 @@ router.get("/latest/humidity", authenticateToken, async (req, res) => {
  */
 router.get("/latest/peoplecount", authenticateToken, async (req, res) => {
   try {
-    const latest = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
+    const latest = await Sensor.findOne({ type: "PeopleCount" }).sort({createdAt: -1 });
     res.json({ peopleCount: latest ? latest.value : 0 });
   } catch (error) {
     console.error(error.stack);
@@ -81,7 +81,7 @@ router.get("/history/temperature", authenticateToken, async (req, res) => {
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
 
         // Fetch temperature data from the last month
-        const temperatureHistory = await Sensor.find({ type: "Temperature", timestamp: { $gte: oneMonthAgo } });
+        const temperatureHistory = await Sensor.find({ type: "Temperature",createdAt: { $gte: oneMonthAgo } });
 
         res.json(temperatureHistory);
     } catch (error) {
@@ -100,7 +100,7 @@ router.get("/history/humidity", authenticateToken, async (req, res) => {
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
 
         // Fetch humidity data from the last month
-        const humidityHistory = await Sensor.find({ type: "Humidity", timestamp: { $gte: oneMonthAgo } });
+        const humidityHistory = await Sensor.find({ type: "Humidity",createdAt: { $gte: oneMonthAgo } });
 
         res.json(humidityHistory);
     } catch (error) {
@@ -119,7 +119,7 @@ router.get("/history/peoplecount", authenticateToken, async (req, res) => {
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Subtract 1 month from the current date
 
         // Fetch people count data from the last month
-        const peopleCountHistory = await Sensor.find({ type: "PeopleCount", timestamp: { $gte: oneMonthAgo } });
+        const peopleCountHistory = await Sensor.find({ type: "PeopleCount",createdAt: { $gte: oneMonthAgo } });
 
         res.json(peopleCountHistory);
     } catch (error) {
@@ -143,7 +143,7 @@ router.post("/", async (req, res) => {
     try {
         // Handle motion sensor logic with ToF sensor to light turn on if people inside, and avoid continuosly store motion sensor data
         if (type === "Motion") {
-            const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
+            const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({createdAt: -1 });
             if (latestPeopleCount?.value === 0 && value === false) {
                 console.log("Turning OFF lights & logging event...");
             } else {
@@ -154,7 +154,7 @@ router.post("/", async (req, res) => {
 
         // Handle PeopleCount logic
         if (type === "PeopleCount") {
-            const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({ timestamp: -1 });
+            const latestPeopleCount = await Sensor.findOne({ type: "PeopleCount" }).sort({createdAt: -1 });
             const currentCount = latestPeopleCount ? latestPeopleCount.value : 0; // Default to 0 if no reading is found
 
             // Update the count based on the new value (+1 for entering, -1 for leaving)
@@ -240,7 +240,7 @@ router.delete("/", authenticateToken, async (req, res) => {
 
         // Delete documents within the date range
         const response = await Sensor.deleteMany({
-            timestamp: { $gte: start, $lte: end } // $gte: greater than or equal, $lte: less than or equal
+        createdAt: { $gte: start, $lte: end } // $gte: greater than or equal, $lte: less than or equal
         });
 
         console.log("Delete response:", response);
