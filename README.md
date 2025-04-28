@@ -88,7 +88,7 @@ After research, the following sensors were chosen:
 - **Milestone 2:** Hardware & Software Setup – Due by **25/2/2025**  
 - **Milestone 3:** Data Processing & Display Implementation – Due by **5/4/2025**  
 - **Milestone 4:** Testing & Optimization – Due by **10/4/2025**  
-- **Final Submission:** **15/4/2025**
+- **Final Submission:** **29/4/2025**
 
 ---
 
