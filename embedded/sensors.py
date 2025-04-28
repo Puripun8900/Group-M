@@ -25,21 +25,20 @@ dht_sensor = dht.DHT22(Pin(DHT_PIN))
 # VL53L1X sensor (People counter)
 '''
 # from vl53l1x import VL53L1X
-Install via mip (MicroPython's package manager)
-import mip
-mip.install("github.com/pimoroni/VL53L1X-python")
 TOF_I2C = I2C(0, scl=Pin(5), sda=Pin(4))
 tof = VL53L1X(TOF_I2C)
-PEOPLE_COUNT = 0
-ENTRANCE_THRESHOLD_MM = 1000  # 1 meter threshold
+
+# People counting variables
+PEOPLE_INSIDE = 0
+ENTER_THRESHOLD = 1000    # Distance under 1m = entering
+EXIT_THRESHOLD = 1500     # Distance over 1.5m = exiting
+static_distance_counter = 0
+STATIC_DISTANCE_CONFIRMATION = 3
 '''
 
 # PN532 NFC (Access control)
 '''
 # from pn532 import PN532_I2C
-Install via mip:
-import mip
-mip.install("github.com/adafruit/Adafruit_CircuitPython_PN532")
 NFC_I2C = I2C(1, scl=Pin(7), sda=Pin(6))
 nfc = PN532_I2C(NFC_I2C)
 AUTHORIZED_CARDS = [
@@ -52,8 +51,8 @@ last_trigger = 0
 last_motion_time = 0
 led_on = False
 last_env_read = 0
-ENV_READ_INTERVAL = 180  # 3 minutes
-DEBOUNCE_TIME = 500  # milliseconds
+ENV_READ_INTERVAL = 900  # 15 minutes
+DEBOUNCE_TIME = 500  
 CONFIRMATION_DELAY = 100  # time between confirmation checks
 
 # WiFi
@@ -69,29 +68,35 @@ def connect_wifi():
 
 # API
 def post_sensor_data(type, model, value, unit):
-    clean_unit = unit.replace("°", "") if "°" in unit else unit
-    
-    data = {
-        "type": type,
-        "model": model,
-        "value": value,
-        "unit": clean_unit
-    }
     try:
+        data = {
+            "type": type,
+            "model": model,
+            "value": value,
+            "unit": unit
+        }
+
+        json_data = ujson.dumps(data)
+        # Replace the degree symbol if needed
+        if "°" in unit:
+            json_data = json_data.replace("°", "\\u00B0")
+
         response = urequests.post(
             SERVER_URL,
             headers={'Content-Type': 'application/json'},
-            data=ujson.dumps(data)
+            data=json_data
         )
         print("API Response:", response.text)
         response.close()
+
     except Exception as e:
         print("API Error:", e)
 
-print("Initializing sensors... (30s)")
+
+print("Initializing sensors... (20s)")
 connect_wifi()
 
-for i in range(30, 0, -1):
+for i in range(20, 0, -1):
     print(f"Stabilizing... {i}s left", end='\r')
     time.sleep(1)
 print("\nAll sensors ready!")
@@ -123,8 +128,7 @@ try:
                             post_sensor_data("Motion", "AS312", True, "boolean")
             
 
-        
-        # Turn off LED after 5 minutes of last motion detected
+        # LED off after 5 minutes of last motion detected
         if led_on and (current_time - last_motion_time) > 300:
             led.off()
             led_on = False
@@ -150,11 +154,26 @@ try:
         '''
         # 3. VL53L1X People Counting Logic
         distance = tof.read()
-        if distance < ENTRANCE_THRESHOLD_MM:
-            PEOPLE_COUNT += 1
-            print(f"Person detected! Total: {PEOPLE_COUNT}")
-            post_sensor_data("PeopleCount", "VL53L1X", PEOPLE_COUNT, "persons")
-            time.sleep(2)
+        if distance < ENTER_THRESHOLD:
+            static_distance_counter += 1
+            if static_distance_counter >= STATIC_DISTANCE_CONFIRMATION:
+                PEOPLE_INSIDE += 1
+                print(f"Person Entered! Total inside: {PEOPLE_INSIDE}")
+                post_sensor_data("PeopleCount", "VL53L1X", PEOPLE_INSIDE, "persons")
+                static_distance_counter = 0
+                time.sleep(2)
+
+        elif distance > EXIT_THRESHOLD and PEOPLE_INSIDE > 0:
+            static_distance_counter += 1
+            if static_distance_counter >= STATIC_DISTANCE_CONFIRMATION:
+                PEOPLE_INSIDE -= 1
+                print(f"Person Exited! Total inside: {PEOPLE_INSIDE}")
+                post_sensor_data("PeopleCount", "VL53L1X", PEOPLE_INSIDE, "persons")
+                static_distance_counter = 0
+                time.sleep(2)
+
+        else:
+            static_distance_counter = 0
         '''
         
         '''
