@@ -56,7 +56,7 @@ This embedded system is part of the **Smart Gym Project**, designed to monitor t
    - Turns on LED when motion is detected, and logs it to the API.
    - Turns off LED after 5 minutes of no motion.
 3. **Environment Sensing:**
-   - Every 3 minutes, reads temperature and humidity from DHT22.
+   - Every 15 minutes, reads temperature and humidity from DHT22.
    - Sends both values to the server.
 4. **(Optional Features)** – Code present for:
    - People counter (VL53L1X)
