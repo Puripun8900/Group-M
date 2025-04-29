@@ -64,4 +64,7 @@ This embedded system is part of the **Smart Gym Project**, designed to monitor t
 
 ---
 
+## Link to the Documentation of the Sensors
+
+https://www.farnell.com/datasheets/2710950.pdf
 
