@@ -57,6 +57,10 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'login.html'));
 });
 
+/**
+ * This function initializes the connection to the MongoDB database.
+ * It should be called before starting the server to ensure the database is ready.
+ */
 connectMongoDB();
 
 

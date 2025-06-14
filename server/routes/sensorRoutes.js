@@ -11,12 +11,12 @@ const authenticateToken = require('../middleware/auth');
  */
 router.get("/", authenticateToken, async (req, res) => {
     try {
-        const { type } = req.query; // Extract the "type" query parameter (e.g. Temperature, Humidity, )
+        const { type } = req.query;
 
         // Build the query object
         let query = {};
         if (type) {
-            query.type = type; // Add type filter if provided
+            query.type = type;
         }
 
         // Fetch data based on the query

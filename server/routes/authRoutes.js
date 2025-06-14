@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userSchema');
-const authenticateToken = require('../middleware/auth'); // Adjust path if different
+const authenticateToken = require('../middleware/auth');
 const { SECRET_KEY } = require('../config/config');
 
 const router = express.Router();
@@ -14,7 +14,7 @@ router.post('/signup', async (req, res) => {
         if (!username || !email || !password) {
             return res.status(400).json({ message: 'All fields are required' });
         }
-
+        
         const existingUser = await User.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
             return res.status(400).json({ message: 'Username or email already exists' });
